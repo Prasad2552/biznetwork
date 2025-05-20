@@ -1,0 +1,11 @@
+[
+    {
+      "id": "my-document-1",
+      "title": "My Document 1",
+      "pdfFilename": "my-document-1-1701234567-abcdef012345.pdf",
+      "imageFilename": "my-document-1-cover-1701234568-ghijkl6789ab.jpg",
+      "type": "Reports",
+      "author": "John Doe",
+      "dateUploaded": "2024-07-27"
+    }
+  ]

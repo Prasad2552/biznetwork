@@ -1,30 +1,50 @@
+// src/app/api/admin/channels/[channelId]/blogs/route.ts
 import { NextResponse } from 'next/server'
+import { z } from "zod";
 import dbConnect from '@/lib/mongodb'
 import Channel from '@/lib/models/Channel'
 import Blog from '@/lib/models/Blog'
 
-export async function POST(request: Request, { params }: { params: { channelId: string } }) {
+// Add this type definition
+interface RouteContext {
+  params: {
+    channelId: string
+  }
+}
+
+export async function GET(
+  request: Request,
+  { params }: RouteContext // Apply typed context
+) {
   try {
     await dbConnect()
+    const channelId = params.channelId
+    const blogs = await Blog.find({ channel: channelId })
+    return NextResponse.json(blogs)
+  } catch (error) {
+    console.error('Error fetching blogs:', error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
+  }
+}
 
+export async function POST(
+  request: Request,
+  { params }: RouteContext // Apply typed context
+) {
+  try {
+    await dbConnect()
+    const channelId = params.channelId
     const { title, content, author } = await request.json()
-
-    const channel = await Channel.findById(params.channelId)
+    
+    const channel = await Channel.findById(channelId)
     if (!channel) {
       return NextResponse.json({ error: 'Channel not found' }, { status: 404 })
     }
 
-    const newBlog = new Blog({
-      title,
-      content,
-      author,
-      channel: params.channelId,
-    })
-
+    const newBlog = new Blog({ title, content, author, channel: channelId })
     await newBlog.save()
 
-    // Update blog count for the channel
-    channel.blogCount += 1
+    channel.blogCount = (channel.blogCount || 0) + 1
     await channel.save()
 
     return NextResponse.json(newBlog, { status: 201 })
@@ -33,17 +53,3 @@ export async function POST(request: Request, { params }: { params: { channelId: 
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 }
-
-export async function GET(request: Request, { params }: { params: { channelId: string } }) {
-  try {
-    await dbConnect()
-
-    const blogs = await Blog.find({ channel: params.channelId })
-
-    return NextResponse.json(blogs)
-  } catch (error) {
-    console.error('Error fetching blogs:', error)
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
-  }
-}
-

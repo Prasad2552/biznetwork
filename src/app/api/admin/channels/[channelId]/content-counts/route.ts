@@ -1,3 +1,4 @@
+// src/app/api/admin/channels/[channelId]/content-counts/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Channel from '@/lib/models/Channel'
@@ -5,12 +6,12 @@ import mongoose from 'mongoose'
 
 export async function GET(
   request: NextRequest,
-  context: { params: { channelId: string } }
+  { params }: { params: Promise<{ channelId: string }> }
 ) {
   try {
     await dbConnect()
 
-    const { channelId } = context.params
+    const { channelId } = await params; // Await the Promise to get the params object
 
     // Validate channelId
     if (!mongoose.Types.ObjectId.isValid(channelId)) {
@@ -56,4 +57,3 @@ export async function GET(
     )
   }
 }
-

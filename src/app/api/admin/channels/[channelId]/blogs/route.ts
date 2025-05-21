@@ -1,22 +1,16 @@
 // src/app/api/admin/channels/[channelId]/blogs/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server'; // Clean, typed import
 import dbConnect from '@/lib/mongodb';
 import Channel from '@/lib/models/Channel';
 import Blog from '@/lib/models/Blog';
 
-// Define the structure for the context's params object
-interface RouteContextParams {
-  channelId: string;
-}
-
 export async function GET(
-  request: NextRequest, // Use NextRequest
-  context: { params: RouteContextParams } // Explicitly type the context object and its params property
+  request: NextRequest,
+  { params }: { params: { channelId: string } }
 ) {
   try {
     await dbConnect();
-    const { channelId } = context.params; // Destructure channelId from context.params
-
+    const channelId = params.channelId;
     const blogs = await Blog.find({ channel: channelId });
     return NextResponse.json(blogs);
   } catch (error) {
@@ -26,12 +20,12 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, // Use NextRequest
-  context: { params: RouteContextParams } // Explicitly type the context object and its params property
+  request: NextRequest,
+  { params }: { params: { channelId: string } }
 ) {
   try {
     await dbConnect();
-    const { channelId } = context.params; // Destructure channelId from context.params
+    const channelId = params.channelId;
 
     const { title, content, author } = await request.json();
     const channel = await Channel.findById(channelId);

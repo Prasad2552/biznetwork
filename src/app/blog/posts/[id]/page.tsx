@@ -1,3 +1,4 @@
+//src\app\blog\posts\[id]\page.tsx
 "use client"
 
 import { useEffect, useState, useCallback, useRef, startTransition, use } from "react"
@@ -7,6 +8,7 @@ import { format } from "date-fns"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { CheckCircle, ArrowRight } from "lucide-react"
+import { useAuthCheck } from '@/hooks/useAuthCheck';
 import { useSession } from "next-auth/react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -53,6 +55,7 @@ const calculateReadingTime = (content: string): number => {
   const wordCount = words.length
   const wordsPerMinute = 200 // Adjust this value as needed
   const readingTime = Math.ceil(wordCount / wordsPerMinute)
+  const { token, isUserLoggedIn } = useAuthCheck();
   return readingTime
 }
 
@@ -71,6 +74,11 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
   const [isSaved, setIsSaved] = useState(false)
   const actionInProgress = useRef(false)
   const { isFollowing, toggleFollow, isLoading, followerCount } = useChannelFollow(post?.channelId || "")
+  const { token, isUserLoggedIn } = useAuthCheck();
+
+   const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   // New state variable for reading time
   const [readingTime, setReadingTime] = useState<number | null>(null)
@@ -289,11 +297,12 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
         <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          activeSidebarItem={activeSidebarItem}
-          setActiveSidebarItem={setActiveSidebarItem}
-        />
+                                    isSidebarOpen={isSidebarOpen}
+                                    toggleSidebar={toggleSidebar}
+                                    activeSidebarItem={activeSidebarItem}
+                                    setActiveSidebarItem={setActiveSidebarItem}
+                                    token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                />
         <div className="flex-1 flex flex-col min-h-screen w-full">
           <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           <div className="max-w-4xl mx-auto p-6">
@@ -327,12 +336,13 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        activeSidebarItem={activeSidebarItem}
-        setActiveSidebarItem={setActiveSidebarItem}
-      />
+     <Sidebar
+                                 isSidebarOpen={isSidebarOpen}
+                                 toggleSidebar={toggleSidebar}
+                                 activeSidebarItem={activeSidebarItem}
+                                 setActiveSidebarItem={setActiveSidebarItem}
+                                 token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                             />
 
       <div className="flex-1 flex flex-col min-h-screen w-full">
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isLoggedIn={isLoggedIn} />

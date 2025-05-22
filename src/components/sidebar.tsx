@@ -1,3 +1,5 @@
+// src/components/sidebar.tsx
+
 'use client'
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button"
@@ -11,7 +13,7 @@ import { useSession } from 'next-auth/react';
 import { usePathname } from "next/navigation";
 import { useAuthCheck } from '@/hooks/useAuthCheck';
 
-// Updated Icon Components using <Image>
+// Icon Components (unchanged)
 const PublishIcon = ({ className }: { className?: string }) => (
   <Image src="/uploads/publish-with-us.svg" alt="Publish Icon" width={20} height={20} className={className} />
 );
@@ -76,7 +78,6 @@ const SavedIcon = ({ className, isActive }: { className?: string, isActive: bool
   />
 );
 
-// Custom SVG Icon Components (unchanged)
 const BizIcon = ({ className, isActive }: { className?: string, isActive: boolean }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -115,21 +116,30 @@ const TrendIcon = ({ className, isActive }: { className?: string, isActive: bool
   </svg>
 );
 
-// Define props interface to replace 'any'
+// Updated SidebarProps interface
 interface SidebarProps {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   activeSidebarItem: string;
   setActiveSidebarItem: (item: string) => void;
+  token: string; // Added to match props passed from parent
+  isUserLoggedIn: boolean; // Added to match props passed from parent
 }
 
-export default function Sidebar({ isSidebarOpen, toggleSidebar, activeSidebarItem, setActiveSidebarItem }: SidebarProps) {
+// Updated Sidebar component with new props
+export default function Sidebar({
+  isSidebarOpen,
+  toggleSidebar,
+  activeSidebarItem,
+  setActiveSidebarItem,
+  token, // Added
+  isUserLoggedIn, // Added
+}: SidebarProps) {
   const { isAdmin } = useAuthCheck();
   const [isExploreOpen, setIsExploreOpen] = useState(true);
   const { data: session } = useSession();
   const pathname = usePathname();
 
-  // Wrap handleItemClick in useCallback to stabilize it
   const handleItemClick = useCallback((name: string) => {
     setActiveSidebarItem(name);
     if (isSidebarOpen && name !== "Subscriptions") {
@@ -180,7 +190,6 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar, activeSidebarIte
         md:relative md:translate-x-0 md:h-screen
       `}
     >
-      {/* Header Section */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center">
           <Link href="/">
@@ -199,10 +208,8 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar, activeSidebarIte
         </Button>
       </div>
 
-      {/* Scrollable Content */}
       <ScrollArea className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
         <div className="p-4">
-          {/* Main Navigation */}
           <div className="space-y-4">
             {sidebarItems.map((item) => (
               <Link key={item.name} href={item.href}>
@@ -224,7 +231,6 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar, activeSidebarIte
 
           <Separator className="my-4 border-gray-300" />
 
-          {/* User Items - Only shown when logged in and not admin */}
           {!isAdmin && session?.user && (
             <>
               <div className="space-y-1">
@@ -249,7 +255,6 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar, activeSidebarIte
             </>
           )}
 
-          {/* Explore Section */}
           <div className="space-y-4">
             <Collapsible open={isExploreOpen} onOpenChange={setIsExploreOpen}>
               <CollapsibleTrigger asChild>
@@ -359,7 +364,6 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar, activeSidebarIte
 
             <Separator className="my-4 border-gray-300" />
 
-            {/* Footer Links */}
             <div className="flex flex-wrap text-sm font-semibold">
               {footerLinks.map((link) => (
                 <Link

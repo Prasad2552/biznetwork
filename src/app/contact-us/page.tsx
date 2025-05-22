@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form'; 
 import { Textarea } from '@/components/ui/textarea'
+import { useAuthCheck } from '@/hooks/useAuthCheck';
 
 const sidebarItems = [
   { name: 'Publish With Us', href: '/publish' },
@@ -32,6 +33,7 @@ export default function ContactUsPage() {
   const [activeNavItem] = useState('All');
   const [isLoggedIn] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm();
+  const { token, isUserLoggedIn, isAdmin, handleLogout } = useAuthCheck();
 
   const onSubmit = (data: any) => {
     console.log("Form data submitted:", data);
@@ -42,12 +44,13 @@ export default function ContactUsPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-     <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          activeSidebarItem={activeSidebarItem}
-          setActiveSidebarItem={setActiveSidebarItem}
-        />
+      <Sidebar
+                           isSidebarOpen={isSidebarOpen}
+                           toggleSidebar={toggleSidebar}
+                           activeSidebarItem={activeSidebarItem}
+                           setActiveSidebarItem={setActiveSidebarItem}
+                           token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                       />
       <div className="flex-1 overflow-hidden">
         <Header  toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} isLoggedIn={isLoggedIn}/>
         <main className="container mx-auto px-4 py-8 overflow-y-auto">

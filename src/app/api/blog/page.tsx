@@ -11,6 +11,7 @@ import Header from '@/components/header';
 import Sidebar from '@/components/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useAuthCheck } from "@/hooks/useAuthCheck";
 
 const sidebarItems = [
     { name: 'Publish With Us', href: '/publish' },
@@ -40,7 +41,8 @@ export default function BlogPage() {
   const { isLoggedIn, logout } = useAuth();
   const router = useRouter()
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+ const { isUserLoggedIn, isAdmin, handleLogout, token } = useAuthCheck();
+ 
   useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
@@ -62,13 +64,13 @@ export default function BlogPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        activeSidebarItem={activeSidebarItem}
-        setActiveSidebarItem={setActiveSidebarItem}
-        sidebarItems={sidebarItems}
-      />
+     <Sidebar
+                                                        isSidebarOpen={isSidebarOpen}
+                                                        toggleSidebar={toggleSidebar}
+                                                        activeSidebarItem={activeSidebarItem}
+                                                        setActiveSidebarItem={setActiveSidebarItem}
+                                                        token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                                    />
       <div className="flex-1">
         <Header 
           toggleSidebar={toggleSidebar} 

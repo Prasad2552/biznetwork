@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useContent } from "@/hooks/use-content";
 import Sidebar from "@/components/sidebar";
+import { useAuthCheck } from '@/hooks/useAuthCheck';
 import Header from "@/components/header";
 import ShareModal from "@/components/ShareModal";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -37,8 +38,9 @@ export default function DocumentPageClient({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeSidebarItem, setActiveSidebarItem] = useState("");
   const [activeNavItem] = useState("All");
+  const { token, isUserLoggedIn, isAdmin, handleLogout } = useAuthCheck();
   const { isFollowing, toggleFollow, isLoading: followLoading } = useChannelFollow(document.channelId);
-
+const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
   useEffect(() => {
     if (savedContent.find((item) => item._id === document.id)) {
       setIsSaved(true);
@@ -272,7 +274,13 @@ export default function DocumentPageClient({
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-poppins">
-      <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} activeSidebarItem={activeSidebarItem} setActiveSidebarItem={setActiveSidebarItem} />
+      <Sidebar
+                      isSidebarOpen={isSidebarOpen}
+                      toggleSidebar={toggleSidebar}
+                      activeSidebarItem={activeSidebarItem}
+                      setActiveSidebarItem={setActiveSidebarItem}
+                      token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                  />
       <div className="flex-1">
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} activeNavItem={activeNavItem} isLoggedIn={!!session?.user} />
         <main className="min-h-screen bg-background">

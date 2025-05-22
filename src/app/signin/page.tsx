@@ -1,62 +1,68 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
-import { Eye, EyeOff } from "lucide-react"
-import { MdOutlineEmail } from "react-icons/md"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ToastContainer, toast } from "react-toastify"
-import "react-toastify/dist/ReactToastify.css"
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { Eye, EyeOff } from "lucide-react";
+import { MdOutlineEmail } from "react-icons/md";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useAuthContext } from "@/contexts/auth-context";
 
 export default function SignIn() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [rememberPassword, setRememberPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { login } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     toast.info("Signing in...", {
       position: "top-right",
       autoClose: 1000,
-    })
-    setIsLoading(true)
+    });
+    setIsLoading(true);
 
     try {
-      const res = await fetch("/api/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false, // Handle redirect manually
+      });
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.message || "Invalid email or password", {
+      if (result?.error) {
+        toast.error(result.error || "Invalid email or password", {
           position: "top-right",
           autoClose: 3000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
-        })
-        return
+        });
+        return;
       }
 
-      if (data.message === "Sign in successful") {
-        localStorage.setItem("token", data.token || "")
+      // Fetch user data to update auth context
+      const sessionResponse = await fetch("/api/auth/session");
+      const session = await sessionResponse.json();
+      if (session?.user) {
+        login(
+          {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.name,
+            role: session.user.role,
+          },
+          session.accessToken || "" // Use a placeholder if no token
+        );
         toast.success("You have successfully signed in!", {
           position: "top-right",
           autoClose: 3000,
@@ -64,9 +70,11 @@ export default function SignIn() {
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
-        })
-        router.refresh()
-        router.push("/")
+        });
+        router.refresh();
+        router.push("/");
+      } else {
+        throw new Error("Failed to retrieve session");
       }
     } catch (error) {
       toast.error("An error occurred while signing in. Please try again.", {
@@ -76,21 +84,20 @@ export default function SignIn() {
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       await signIn("google", {
         callbackUrl: "/",
-      })
-      router.refresh()
+      });
     } catch (error) {
-      console.error("Sign-in error:", error)
+      console.error("Sign-in error:", error);
       toast.error("Failed to sign in with Google", {
         position: "top-right",
         autoClose: 3000,
@@ -98,10 +105,10 @@ export default function SignIn() {
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-      })
-      setIsLoading(false)
+      });
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen w-full bg-white flex items-center justify-center p-2 md:p-10 lg:p-10">
@@ -122,7 +129,7 @@ export default function SignIn() {
           {/* Left side - Illustration */}
           <div className="w-full lg:w-1/2 bg-[#f5f5f5] rounded-2xl p-8">
             <Image
-              src="/uploads/Computer-login-rafiki .png"
+              src="/Uploads/login.webp" // Fixed space in filename
               alt="Sign in illustration"
               width={600}
               height={500}
@@ -134,7 +141,7 @@ export default function SignIn() {
           {/* Right side - Sign in form */}
           <div className="w-full lg:w-[400px] bg-white rounded-2xl p-8 justify-items-center">
             <div className="mb-8">
-              <Image src="/uploads/Logo.svg" alt="BizNetwork Logo" width={150} height={40} priority className="mb-6" />
+              <Image src="/Uploads/Logo.svg" alt="BizNetwork Logo" width={150} height={40} priority className="mb-6" />
               <h2 className="text-[28px] font-semibold text-[#1a1a1a]">Welcome back!</h2>
               <p className="text-[#666666] mt-1">Please enter your details</p>
             </div>
@@ -175,7 +182,7 @@ export default function SignIn() {
                   <Checkbox
                     id="remember"
                     checked={rememberPassword}
-                    onCheckedChange={(checked) => setRememberPassword(checked as boolean)}
+                    onCheckedChange={(checked: boolean) => setRememberPassword(checked)}
                     className="border-[#e5e5e5] data-[state=checked]:bg-[#0041C2] data-[state=checked]:border-[#0041C2] mr-2"
                   />
                   <label htmlFor="remember" className="mr-10 text-sm text-[#666666]">
@@ -201,7 +208,7 @@ export default function SignIn() {
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
               >
-                <Image src="/uploads/Google-logo.png" alt="Google" width={20} height={20} className="mr-2" />
+                <Image src="/Uploads/Google-logo.png" alt="Google" width={20} height={20} className="mr-2" />
                 Google
               </Button>
             </form>
@@ -216,6 +223,5 @@ export default function SignIn() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

@@ -1,21 +1,16 @@
-"use client"
-
-import Home from "@/app/page"
+import { Suspense } from 'react';
+import ClientVideoPage from './ClientVideoPage';
 
 interface Params {
-  videoId: string
-  slug: string
+  videoId: string;
+  slug: string;
 }
 
-interface VideoPageProps {
-  params: Params
-  searchParams?: { [key: string]: string | string[] | undefined }
+export default async function VideoPage({ params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClientVideoPage params={resolvedParams} />
+    </Suspense>
+  );
 }
-
-export default function VideosPage({ params, searchParams }: VideoPageProps) {
-  // Wrap params in a Promise
-  const paramsPromise = Promise.resolve(params)
-
-  return <Home params={paramsPromise} searchParams={searchParams} />
-}
-

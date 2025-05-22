@@ -1,53 +1,52 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { verify } from 'jsonwebtoken'
+'use client'
 
-export async function verifyAuth(token: string): Promise<string | null> {
-  try {
-    const decoded = verify(token, process.env.JWT_SECRET as string) as { userId: string }
-    return decoded.userId
-  } catch (error) {
-    console.error('Error verifying token:', error)
-    return null
-  }
-}
+import { useState, useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export function useAuth() {
+  const { data: session, status } = useSession()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
-  
-
   useEffect(() => {
-    const storedToken = localStorage.getItem('token')
-    const storedUserId = localStorage.getItem('userId')
-    if (storedToken && storedUserId) {
+    if (status === 'authenticated' && session?.user) {
       setIsLoggedIn(true)
+      setUserId(session.user.id)
+      const storedToken = localStorage.getItem('token')
       setToken(storedToken)
-      setUserId(storedUserId)
+    } else {
+      setIsLoggedIn(false)
+      setUserId(null)
+      setToken(null)
+      localStorage.removeItem('token')
+      localStorage.removeItem('userId')
     }
-  }, [])
+  }, [session, status])
 
   const login = (newToken: string, newUserId: string) => {
-    localStorage.setItem('token', newToken)
-    localStorage.setItem('userId', newUserId)
     setIsLoggedIn(true)
     setToken(newToken)
     setUserId(newUserId)
+    localStorage.setItem('token', newToken)
+    localStorage.setItem('userId', newUserId)
   }
 
-  const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('userId')
-    setIsLoggedIn(false)
-    setToken(null)
-    setUserId(null)
-    router.push('/')
+  const logout = async () => {
+    try {
+      await signOut({ redirect: false })
+      setIsLoggedIn(false)
+      setToken(null)
+      setUserId(null)
+      localStorage.removeItem('token')
+      localStorage.removeItem('userId')
+      router.push('/')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   return { isLoggedIn, token, userId, login, logout }
 }
-
-

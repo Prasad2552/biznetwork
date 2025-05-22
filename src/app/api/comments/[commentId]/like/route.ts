@@ -7,8 +7,11 @@ import { Types, isValidObjectId } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { getToken } from 'next-auth/jwt';
 
-export async function POST(req: NextRequest, { params }: { params: { commentId: string } }) {
-    try {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ commentId: string }> } // params is a Promise
+) {
+  try {
         await connectDB();
         const { commentId } = await Promise.resolve(params);
 

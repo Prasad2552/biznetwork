@@ -16,6 +16,7 @@ import Header from '@/components/header';
 import Sidebar from '@/components/sidebar';
 import { toast } from 'react-toastify';
 
+
 interface CaseStudyPost {
     _id: string;
     title: string;
@@ -58,6 +59,7 @@ const CaseStudyPostPage: React.FC = () => {
     const [activeNavItem, setActiveNavItem] = useState('All');
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
      const [user, setUser] = useState<any>(null);
+     
 
 
     const sidebarItems = [
@@ -254,12 +256,12 @@ const CaseStudyPostPage: React.FC = () => {
     const renderSkeleton = () => (
         <div className="flex min-h-screen">
            <Sidebar
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={toggleSidebar}
-                activeSidebarItem={activeSidebarItem}
-                setActiveSidebarItem={setActiveSidebarItem}
-                sidebarItems={sidebarItems}
-             />
+                                 isSidebarOpen={isSidebarOpen}
+                                 toggleSidebar={toggleSidebar}
+                                 activeSidebarItem={activeSidebarItem}
+                                 setActiveSidebarItem={setActiveSidebarItem}
+                                 token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                             />
             <div className="flex-1">
                <Header toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} />
                 <div className="container mx-auto p-4">
@@ -293,7 +295,13 @@ const CaseStudyPostPage: React.FC = () => {
     if (error) {
         return (
             <div className="flex min-h-screen">
-                <Sidebar />
+               <Sidebar
+                                     isSidebarOpen={isSidebarOpen}
+                                     toggleSidebar={toggleSidebar}
+                                     activeSidebarItem={activeSidebarItem}
+                                     setActiveSidebarItem={setActiveSidebarItem}
+                                     token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                 />
                 <div className="flex-1">
                     <Header toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} />
                     <div className="container mx-auto p-4">
@@ -310,7 +318,13 @@ const CaseStudyPostPage: React.FC = () => {
     if (!caseStudyPost) {
         return (
              <div className="flex min-h-screen">
-                <Sidebar />
+                <Sidebar
+                                      isSidebarOpen={isSidebarOpen}
+                                      toggleSidebar={toggleSidebar}
+                                      activeSidebarItem={activeSidebarItem}
+                                      setActiveSidebarItem={setActiveSidebarItem}
+                                      token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                  />
                 <div className="flex-1">
                    <Header toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} />
                     <div className="container mx-auto p-4">
@@ -334,12 +348,12 @@ const CaseStudyPostPage: React.FC = () => {
     return (
         <div className="flex min-h-screen">
             <Sidebar
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={toggleSidebar}
-                activeSidebarItem={activeSidebarItem}
-                setActiveSidebarItem={setActiveSidebarItem}
-                sidebarItems={sidebarItems}
-            />
+                                  isSidebarOpen={isSidebarOpen}
+                                  toggleSidebar={toggleSidebar}
+                                  activeSidebarItem={activeSidebarItem}
+                                  setActiveSidebarItem={setActiveSidebarItem}
+                                  token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                              />
             <div className="flex-1">
                <Header toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} />
                 <div className="container mx-auto p-4">

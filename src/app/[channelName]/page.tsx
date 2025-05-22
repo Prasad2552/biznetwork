@@ -278,11 +278,12 @@ const ChannelPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
            <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          activeSidebarItem={activeSidebarItem}
-          setActiveSidebarItem={setActiveSidebarItem}
-        />
+                                isSidebarOpen={isSidebarOpen}
+                                toggleSidebar={toggleSidebar}
+                                activeSidebarItem={activeSidebarItem}
+                                setActiveSidebarItem={setActiveSidebarItem}
+                                token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                            />
             <div className="flex-1 flex flex-col min-h-screen w-full">
                 {renderHeader()}
                 <main className="flex-1 overflow-y-auto p-4">

@@ -3,7 +3,7 @@ import connectDB from '@/lib/mongodb'
 import { generateOTP, sendEmail } from '@/lib/email'
 import OTP from '@/lib/models/OTP'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { authOptions } from "@/lib/authOptions";
 import { rateLimit } from '@/lib/rate-limit'
 import mongoose from 'mongoose'
 

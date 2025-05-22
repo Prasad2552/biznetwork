@@ -4,13 +4,14 @@ import { useState } from 'react'
 import Sidebar from '@/components/sidebar'
 import Header from '@/components/header'
 import { PublishForm } from '@/components/publish-form'
+import { useAuthCheck } from "@/hooks/useAuthCheck";
 
 export default function PublishPage() {
     const [activeSidebarItem, setActiveSidebarItem] = useState('about us');
     const [isLoggedIn] = useState(false); 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Here's the state!
     const [activeNavItem] = useState('All');
-    
+    const { isUserLoggedIn, isAdmin, handleLogout, token } = useAuthCheck();
   
     const toggleSidebar = () => {
       setIsSidebarOpen(!isSidebarOpen);
@@ -26,13 +27,13 @@ export default function PublishPage() {
   
     return (
       <div className="flex min-h-screen bg-gray-50">
-        <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-          activeSidebarItem={activeSidebarItem}
-          setActiveSidebarItem={setActiveSidebarItem}
-          sidebarItems={sidebarItems}
-        />
+       <Sidebar
+                                                   isSidebarOpen={isSidebarOpen}
+                                                   toggleSidebar={toggleSidebar}
+                                                   activeSidebarItem={activeSidebarItem}
+                                                   setActiveSidebarItem={setActiveSidebarItem}
+                                                   token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                               />
         <div className="flex-1">
           <Header  toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} isLoggedIn={isLoggedIn}/>
         <main className="flex-1 overflow-y-auto p-4 bg-gray-50">

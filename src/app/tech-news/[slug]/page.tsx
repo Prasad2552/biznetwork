@@ -15,6 +15,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ShareModal from "@/components/ShareModal"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
+import { useAuthCheck } from "@/hooks/useAuthCheck"
 import { use } from 'react';
 
 interface TechNewsArticle {
@@ -55,12 +56,12 @@ export default function TechNewsArticlePage({ params }: { params: Promise<{ slug
     const { data: session } = useSession();
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
     const userId = session?.user?.id || null;
-
+    const { token } = useAuthCheck()
     const [hasLiked, setHasLiked] = useState(false);
     const [hasDisliked, setHasDisliked] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
     const [showFullContent, setShowFullContent] = useState(false);
-
+    const { isUserLoggedIn } = useAuthCheck();
 
     const router = useRouter()
 
@@ -243,12 +244,12 @@ export default function TechNewsArticlePage({ params }: { params: Promise<{ slug
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
                 <Sidebar
-                    isSidebarOpen={isSidebarOpen}
-                    toggleSidebar={toggleSidebar}
-                    activeSidebarItem={activeSidebarItem}
-                    setActiveSidebarItem={setActiveSidebarItem}
-                    sidebarItems={sidebarItems}
-                />
+                                                                         isSidebarOpen={isSidebarOpen}
+                                                                         toggleSidebar={toggleSidebar}
+                                                                         activeSidebarItem={activeSidebarItem}
+                                                                         setActiveSidebarItem={setActiveSidebarItem}
+                                                                         token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                                                     />
                 <div className="flex-1 flex flex-col min-h-screen w-full">
                     <Header
                         toggleSidebar={toggleSidebar}
@@ -269,12 +270,12 @@ export default function TechNewsArticlePage({ params }: { params: Promise<{ slug
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
                 <Sidebar
-                    isSidebarOpen={isSidebarOpen}
-                    toggleSidebar={toggleSidebar}
-                    activeSidebarItem={activeSidebarItem}
-                    setActiveSidebarItem={setActiveSidebarItem}
-                    sidebarItems={sidebarItems}
-                />
+                                                                         isSidebarOpen={isSidebarOpen}
+                                                                         toggleSidebar={toggleSidebar}
+                                                                         activeSidebarItem={activeSidebarItem}
+                                                                         setActiveSidebarItem={setActiveSidebarItem}
+                                                                         token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                                                     />
                 <div className="flex-1 flex flex-col min-h-screen w-full">
                     <Header
                         toggleSidebar={toggleSidebar}
@@ -303,13 +304,13 @@ export default function TechNewsArticlePage({ params }: { params: Promise<{ slug
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-            <Sidebar
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={toggleSidebar}
-                activeSidebarItem={activeSidebarItem}
-                setActiveSidebarItem={setActiveSidebarItem}
-                sidebarItems={sidebarItems}
-            />
+           <Sidebar
+                                                                    isSidebarOpen={isSidebarOpen}
+                                                                    toggleSidebar={toggleSidebar}
+                                                                    activeSidebarItem={activeSidebarItem}
+                                                                    setActiveSidebarItem={setActiveSidebarItem}
+                                                                    token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                                                />
             <div className="flex-1 flex flex-col min-h-screen w-full">
                 <Header
                     toggleSidebar={toggleSidebar}

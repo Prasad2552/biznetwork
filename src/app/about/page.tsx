@@ -5,10 +5,12 @@ import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import Sidebar from '@/components/sidebar'
 import Header from '@/components/header'
+import { useAuthCheck } from '@/hooks/useAuthCheck';
 
 export default function AboutPage() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('about us');
   const [isLoggedIn] = useState(false);
+   const { token, isUserLoggedIn } = useAuthCheck();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeNavItem] = useState('All');
 
@@ -27,12 +29,12 @@ export default function AboutPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        activeSidebarItem={activeSidebarItem}
-        setActiveSidebarItem={setActiveSidebarItem}
-        sidebarItems={sidebarItems}
-      />
+                            isSidebarOpen={isSidebarOpen}
+                            toggleSidebar={toggleSidebar}
+                            activeSidebarItem={activeSidebarItem}
+                            setActiveSidebarItem={setActiveSidebarItem}
+                            token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                        />
       <div className="flex-1 overflow-hidden">
         <Header toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} isLoggedIn={isLoggedIn}/>
 

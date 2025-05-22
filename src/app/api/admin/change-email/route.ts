@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import OTP from '@/lib/models/OTP'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { authOptions } from "@/lib/authOptions";
 import mongoose from 'mongoose'
 
 export async function POST(req: Request) {

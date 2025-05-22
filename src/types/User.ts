@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema<IUser>({
   lastName: { type: String },
   name: { type: String },
   email: { type: String, required: true, unique: true },
-  password: { type: String },
+  password: { type: String, required: true, select: false },
   image: { type: String },
   provider: { type: String },
 });

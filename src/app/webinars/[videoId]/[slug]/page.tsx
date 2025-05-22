@@ -3,19 +3,18 @@
 import Home from "@/app/page"
 
 interface Params {
-  videoId: string
-  slug: string
+  videoId: string;
+  slug: string;
 }
 
 interface VideoPageProps {
-  params: Params
-  searchParams?: { [key: string]: string | string[] | undefined }
+  params: Promise<Params>;
 }
 
-export default function VideosPage({ params, searchParams }: VideoPageProps) {
-  // Wrap params in a Promise
-  const paramsPromise = Promise.resolve(params)
+export default async function VideosPage({ params }: VideoPageProps) {
+  const resolvedParams = await params; // Resolve the Promise
+  const paramsPromise = Promise.resolve(resolvedParams); // Pass as Promise to Home
 
-  return <Home params={paramsPromise} searchParams={searchParams} />
+  return <Home params={paramsPromise} />;
 }
 

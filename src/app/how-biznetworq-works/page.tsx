@@ -4,18 +4,20 @@ import React, { useState } from 'react'
 import Header from '@/components/header'
 import Sidebar from '@/components/sidebar'
 import Image from 'next/image'
-
+  import { useAuthCheck } from '@/hooks/useAuthCheck';
 const sidebarItems = [
   { name: 'Publish With Us', href: '/publish' },
   { name: 'About Us', href: '/about' },
   { name: 'Contact Us', href: '/contact' },
   { name: 'Help', href: '/help' },
   { name: 'Send Feedback', href: '/sendfeedback' },
+
 ]
 
 export default function HowItWorksPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('How BizNetworQ Works')
+  const { token, isUserLoggedIn, isAdmin, handleLogout } = useAuthCheck();
   const [activeNavItem] = useState('All')
   const [isLoggedIn] = useState(false)
 
@@ -24,12 +26,12 @@ export default function HowItWorksPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        activeSidebarItem={activeSidebarItem}
-        setActiveSidebarItem={setActiveSidebarItem}
-        sidebarItems={sidebarItems}
-      />
+                      isSidebarOpen={isSidebarOpen}
+                      toggleSidebar={toggleSidebar}
+                      activeSidebarItem={activeSidebarItem}
+                      setActiveSidebarItem={setActiveSidebarItem}
+                      token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                  />
       <div className="flex-1">
         <Header 
           toggleSidebar={toggleSidebar} 

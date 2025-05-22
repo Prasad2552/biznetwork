@@ -61,6 +61,7 @@ export default function ShortsPage() {
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen)
     }
+    const { isUserLoggedIn } = useAuthCheck();
     const videoRef = useRef<HTMLVideoElement | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const touchStartRef = useRef(0)
@@ -72,6 +73,7 @@ export default function ShortsPage() {
     const preloadedVideosRef = useRef<{ [key: string]: HTMLVideoElement }>({})
     const viewCountUpdatedRef = useRef<Set<string>>(new Set()); // Use a Set to track view counts
     const currentShort = shorts[currentShortIndex];
+    
 const shortId = currentShort?._id;
     // Debounced URL update
     const updateUrl = useCallback(
@@ -475,11 +477,12 @@ const shortId = currentShort?._id;
     return (
         <div className="flex min-h-screen bg-[#F9F9F9]  ">
             <Sidebar
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={toggleSidebar}
-                activeSidebarItem={activeSidebarItem}
-                setActiveSidebarItem={setActiveSidebarItem}
-            />
+                                                                    isSidebarOpen={isSidebarOpen}
+                                                                    toggleSidebar={toggleSidebar}
+                                                                    activeSidebarItem={activeSidebarItem}
+                                                                    setActiveSidebarItem={setActiveSidebarItem}
+                                                                    token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                                                />
             <div className="flex-1 ">
                
 

@@ -3,6 +3,7 @@
 import React from 'react';
 import Header from '@/components/header';
 import Sidebar from '@/components/sidebar';
+import { useAuthCheck } from '@/hooks/useAuthCheck';
 
 
 const sidebarItems = [
@@ -23,16 +24,17 @@ export default function DocumentLayout({ children }: DocumentLayoutProps) {
     const [activeNavItem] = React.useState('All');
     const [isLoggedIn] = React.useState(false);
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+     const { token, isUserLoggedIn } = useAuthCheck();
 
     return (
         <div className="flex min-h-screen bg-gray-50">
             <Sidebar
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={toggleSidebar}
-                activeSidebarItem={activeSidebarItem}
-                setActiveSidebarItem={setActiveSidebarItem}
-                sidebarItems={sidebarItems}
-            />
+                                        isSidebarOpen={isSidebarOpen}
+                                        toggleSidebar={toggleSidebar}
+                                        activeSidebarItem={activeSidebarItem}
+                                        setActiveSidebarItem={setActiveSidebarItem}
+                                        token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                    />
             <div className="flex-1 flex flex-col">
                 <Header
                     toggleSidebar={toggleSidebar}

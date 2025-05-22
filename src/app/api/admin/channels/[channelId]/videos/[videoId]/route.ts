@@ -1,31 +1,32 @@
-// pages/api/videos/[videoId].ts
-import { NextApiRequest, NextApiResponse } from 'next';
-import connectDB from '@/lib/mongodb'; // Import your database connection function
-import Video from '@/lib/models/Video'; // Import your Video model
+// src/app/api/admin/channels/[channelId]/videos/[videoId]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import connectDB from '@/lib/mongodb';
+import Video from '@/lib/models/Video';
 import { Types } from 'mongoose';
 
-
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ channelId: string; videoId: string }> }
+) {
   try {
     await connectDB();
 
-    const videoId = req.query.videoId;
+    const { videoId } = await params; // Await the Promise to get the params object
 
-    if (!videoId || typeof videoId !== 'string') {
-      return res.status(400).json({ error: 'Invalid videoId' });
+    if (!videoId || !Types.ObjectId.isValid(videoId)) {
+      return NextResponse.json({ error: 'Invalid videoId' }, { status: 400 });
     }
 
-    const video = await Video.findById(new Types.ObjectId(videoId)).lean();
+    const video = await Video.findById(videoId).lean();
 
     if (!video) {
-      return res.status(404).json({ error: 'Video not found' });
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
-    console.log("Fetched video:", video);
 
-    res.status(200).json(video);
+    console.log('Fetched video:', video);
+    return NextResponse.json(video);
   } catch (error) {
     console.error('Error fetching video:', error);
-    res.status(500).json({ error: 'Failed to fetch video' });
+    return NextResponse.json({ error: 'Failed to fetch video' }, { status: 500 });
   }
 }

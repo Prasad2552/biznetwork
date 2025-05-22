@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import Header from '@/components/header'
 import Sidebar from '@/components/sidebar'
 import Link from 'next/link'
+import { useAuthCheck } from "@/hooks/useAuthCheck";
 
 const sidebarItems = [
   { name: 'Publish With Us', href: '/publish' },
@@ -20,18 +21,19 @@ export default function PrivacyPolicyPage() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Privacy Policy')
   const [activeNavItem] = useState('All')
   const [isLoggedIn] = useState(false)
+  const { isUserLoggedIn, isAdmin, handleLogout, token } = useAuthCheck();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-poppins">
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        activeSidebarItem={activeSidebarItem}
-        setActiveSidebarItem={setActiveSidebarItem}
-        sidebarItems={sidebarItems}
-      />
+                                          <Sidebar
+                                            isSidebarOpen={isSidebarOpen}
+                                            toggleSidebar={toggleSidebar}
+                                            activeSidebarItem={activeSidebarItem}
+                                            setActiveSidebarItem={setActiveSidebarItem}
+                                            token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                        />
       <div className="flex-1">
         <Header 
           toggleSidebar={toggleSidebar} 

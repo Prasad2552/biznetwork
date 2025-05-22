@@ -20,8 +20,7 @@ interface BlogPost {
   featuredImage?: string
 }
 
-export default function EditBlogPost({ params }: { params: { id: string } }) {
-  const { id } = params
+export default function EditBlogPost({ params }: { params: Promise<{ id: string }> }) {
   const [blogPost, setBlogPost] = useState<BlogPost | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [newFeaturedImage, setNewFeaturedImage] = useState<File | null>(null)
@@ -30,7 +29,8 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
   const editorRef = useRef<EditorRef | null>(null)
 
   useEffect(() => {
-    const fetchBlogPost = async () => {
+    const fetchParamsAndBlogPost = async () => {
+      const { id } = await params
       try {
         const response = await fetch(`/api/blog/posts/${id}`)
         if (!response.ok) {
@@ -48,14 +48,15 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
       }
     }
 
-    fetchBlogPost()
-  }, [id, toast])
+    fetchParamsAndBlogPost()
+  }, [params, toast])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setIsLoading(true)
 
     try {
+      const { id } = await params
       const formData = new FormData()
       formData.append('title', blogPost!.title)
       formData.append('content', editorRef.current?.getContent() || '')
@@ -94,7 +95,7 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
-    setBlogPost(prev => ({ ...prev!, [name]: value }))
+    setBlogPost(prev => prev ? { ...prev, [name]: value } : prev)
   }
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,9 +140,8 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
                   <Image 
                     src={newFeaturedImage ? URL.createObjectURL(newFeaturedImage) : blogPost.featuredImage!}
                     alt={blogPost.title} 
-                    layout="fill"
-                    objectFit="cover"
-                    className="rounded-md"
+                    fill
+                    className="rounded-md object-cover"
                   />
                 </div>
               )}
@@ -149,9 +149,9 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>
               <Editor
-               apiKey="oxpar47sm2yd2zuy03btux6xgbf2jv2a5xx0q5rk3u2k6iyx"
+                apiKey="oxpar47sm2yd2zuy03btux6xgbf2jv2a5xx0q5rk3u2k6iyx"
                 onInit={(_, editor) => {
-                  editorRef.current = editor;
+                  editorRef.current = editor
                 }}
                 initialValue={blogPost.content}
                 init={{
@@ -169,24 +169,24 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
                   content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
                   images_upload_handler: async (blobInfo, progress) => {
                     try {
-                      const formData = new FormData();
-                      formData.append('file', blobInfo.blob(), blobInfo.filename());
+                      const formData = new FormData()
+                      formData.append('file', blobInfo.blob(), blobInfo.filename())
                       
                       const response = await fetch('/api/upload-image', {
                         method: 'POST',
                         body: formData
-                      });
+                      })
                       
                       if (!response.ok) {
-                        throw new Error('Upload failed');
+                        throw new Error('Upload failed')
                       }
                       
-                      const data = await response.json();
-                      progress(100);
-                      return data.location;
+                      const data = await response.json()
+                      progress(100)
+                      return data.location
                     } catch (e) {
-                      progress(0);
-                      throw e;
+                      progress(0)
+                      throw e
                     }
                   }
                 }}
@@ -225,4 +225,3 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
     </div>
   )
 }
-

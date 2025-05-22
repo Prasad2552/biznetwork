@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { Upload } from 'lucide-react';
+import { useAuthCheck } from "@/hooks/useAuthCheck";
 
 const sidebarItems = [
   { name: 'Publish With Us', href: '/publish' },
@@ -25,6 +26,7 @@ export default function SendFeedbackPage() {
   const [activeNavItem] = useState('All');
   const [isLoggedIn] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const { isUserLoggedIn, isAdmin, handleLogout, token } = useAuthCheck();
   
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -56,12 +58,12 @@ export default function SendFeedbackPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        activeSidebarItem={activeSidebarItem}
-        setActiveSidebarItem={setActiveSidebarItem}
-        sidebarItems={sidebarItems}
-      />
+                                                         isSidebarOpen={isSidebarOpen}
+                                                         toggleSidebar={toggleSidebar}
+                                                         activeSidebarItem={activeSidebarItem}
+                                                         setActiveSidebarItem={setActiveSidebarItem}
+                                                         token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
+                                                     />
       <div className="flex-1">
         <Header 
           toggleSidebar={toggleSidebar} 

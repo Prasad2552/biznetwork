@@ -1,14 +1,12 @@
-
-//src\app\layout.tsx
+// src/app/layout.tsx
 import './globals.css'
 import { Poppins } from 'next/font/google'
-import { Providers } from './providers'
 import 'react-toastify/dist/ReactToastify.css'
- import { AuthProvider } from '@/contexts/auth-context';
+import { Providers } from './providers'
 
- const poppins = Poppins({ 
+const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'], // Include all weights you need
+  weight: ['300', '400', '500', '600', '700'],
 })
 
 export const metadata = {
@@ -22,13 +20,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
+    <html lang="en">
       <body className={poppins.className}>
-          <AuthProvider>
-            <Providers>
-             {children}
-            </Providers>
-         </AuthProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

@@ -1,81 +1,74 @@
-import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import Testimonial from '@/lib/models/Testimonial';
-import jwt from 'jsonwebtoken';
-import { Types } from 'mongoose';
-import { getToken } from 'next-auth/jwt';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
+import connectDB from "@/lib/mongodb";
+import Testimonial from "@/lib/models/Testimonial";
+import { Types, isValidObjectId } from "mongoose";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-    try {
-        await connectDB();
-        const { id: testimonialId } = await Promise.resolve(params); // Await params
-        let userId: Types.ObjectId | null = null;
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectDB();
+    const { id: testimonialId } = await params;
 
-        // Check for NextAuth session first
-        const session = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-        if (session && session.id) {
-            userId = new Types.ObjectId(session.id);
-        }else {
-           // If no session, then try jwt authentication
-            const authHeader = req.headers.get('authorization');
-            const token = authHeader?.substring(7);
-
-            if (!token) {
-                return NextResponse.json({ error: 'Unauthorized, missing token' }, { status: 401 });
-            }
-            
-            try {
-                const decodedToken = jwt.verify(token, process.env.JWT_SECRET!) as any;
-                userId = new Types.ObjectId(decodedToken.userId);
-            }
-            catch (jwtError) {
-                return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
-            }
-        }
-
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized: User ID not found' }, { status: 401 });
-        }
-
-        const testimonial = await Testimonial.findById(testimonialId);
-        if (!testimonial) {
-            return NextResponse.json({ error: 'Testimonial not found' }, { status: 404 });
-        }
-
-       const existingLike = testimonial.likedBy?.find((user: Types.ObjectId) => user.equals(userId));
-        const existingDislike = testimonial.dislikedBy?.find((user: Types.ObjectId) => user.equals(userId));
-
-       const updateData: any = {};
-        let liked = false;
-        let disliked = false;
-
-        if (existingLike) {
-          // User has liked, remove like and add dislike
-          updateData.$pull = { likedBy: userId };
-          updateData.$inc = { likes: -1, dislikes: 1 };
-           updateData.$addToSet = { dislikedBy: userId };
-           liked = false;
-            disliked = true;
-        } else if (existingDislike){
-            // user already disliked , remove dislike
-           updateData.$pull = { dislikedBy: userId };
-           updateData.$inc = { dislikes: -1 };
-           disliked = false;
-        } else {
-            //User hasn't liked or disliked. add dislike
-            updateData.$addToSet = { dislikedBy: userId };
-            updateData.$inc = { dislikes: 1 };
-            disliked = true;
-          }
-
-        await testimonial.updateOne(updateData);
-        const updatedTestimonial = await Testimonial.findById(testimonialId);
-
-        return NextResponse.json({ likes: updatedTestimonial.likes, dislikes: updatedTestimonial.dislikes, likedBy: updatedTestimonial.likedBy, dislikedBy: updatedTestimonial.dislikedBy, liked, disliked });
-
-
-    } catch (error: any) {
-        console.error('Error disliking testimonial:', error);
-         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized: Authentication required" }, { status: 401 });
     }
+
+    const userId = new Types.ObjectId(session.user.id);
+
+    if (!isValidObjectId(testimonialId)) {
+      return NextResponse.json({ error: "Invalid testimonial ID" }, { status: 400 });
+    }
+
+    const testimonial = await Testimonial.findById(testimonialId).select("likedBy dislikedBy likes dislikes");
+    if (!testimonial) {
+      return NextResponse.json({ error: "Testimonial not found" }, { status: 404 });
+    }
+
+    const existingLike = testimonial.likedBy?.find((user: Types.ObjectId) => user.equals(userId));
+    const existingDislike = testimonial.dislikedBy?.find((user: Types.ObjectId) => user.equals(userId));
+
+    const updateData: any = {};
+    let liked = !!existingLike;
+    let disliked = !!existingDislike;
+
+    if (existingLike) {
+      updateData.$pull = { likedBy: userId };
+      updateData.$addToSet = { dislikedBy: userId };
+      updateData.$inc = { likes: -1, dislikes: 1 };
+      liked = false;
+      disliked = true;
+    } else if (existingDislike) {
+      updateData.$pull = { dislikedBy: userId };
+      updateData.$inc = { dislikes: -1 };
+      disliked = false;
+    } else {
+      updateData.$addToSet = { dislikedBy: userId };
+      updateData.$inc = { dislikes: 1 };
+      disliked = true;
+    }
+
+    await testimonial.updateOne(updateData);
+    const updatedTestimonial = await Testimonial.findById(testimonialId).select("likedBy dislikedBy likes dislikes");
+
+    if (!updatedTestimonial) {
+      return NextResponse.json({ error: "Testimonial not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      likes: updatedTestimonial.likes,
+      dislikes: updatedTestimonial.dislikes,
+      likedBy: updatedTestimonial.likedBy,
+      dislikedBy: updatedTestimonial.dislikedBy,
+      liked,
+      disliked,
+    });
+  } catch (error: any) {
+    console.error("Error disliking testimonial:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
 }

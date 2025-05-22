@@ -1,31 +1,28 @@
-// src/app/api/tech-news/[slug]/route.ts
-import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import TechNews from '@/lib/models/TechNews';  // Import the TechNews model
+import { NextRequest, NextResponse } from "next/server";
+import connectDB from "@/lib/mongodb";
+import TechNews from "@/lib/models/TechNews";
 
-interface Params {
-    slug?: string;
-}
-
-export async function GET(req: Request, { params }: { params: Params }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
   try {
     await connectDB();
     const { slug } = await params;
 
-    // Check if slug was provided
     if (!slug) {
-      return new NextResponse(JSON.stringify({ message: "Tech News slug is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+      return NextResponse.json({ message: "Tech News slug is required" }, { status: 400 });
     }
-    
-    const techNews = await TechNews.findOne({slug: slug});
+
+    const techNews = await TechNews.findOne({ slug }).lean();
 
     if (!techNews) {
-      return new NextResponse(JSON.stringify({ message: "Tech News not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+      return NextResponse.json({ message: "Tech News not found" }, { status: 404 });
     }
 
     return NextResponse.json(techNews);
-  } catch (error:any) {
-    console.error('Error fetching Tech News:', error);
-    return NextResponse.json({ message: 'Failed to fetch Tech News', error: error?.message }, { status: 500 });
+  } catch (error: any) {
+    console.error("Error fetching Tech News:", error);
+    return NextResponse.json({ message: "Failed to fetch Tech News", error: error?.message }, { status: 500 });
   }
 }

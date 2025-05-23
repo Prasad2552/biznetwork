@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb';
 import PDFModel from '@/lib/models/PDF';
 
@@ -14,7 +14,7 @@ interface Document {
   channelId: string;
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await connectDB();
 
@@ -32,10 +32,8 @@ export async function GET(request: Request) {
       channelId: pdf.channelId,
     }));
 
-    documents.sort(
-      (a, b) =>
-        new Date(b.dateUploaded).getTime() -
-        new Date(a.dateUploaded).getTime()
+    documents.sort((a, b) =>
+      new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
     );
 
     return new NextResponse(JSON.stringify(documents), {

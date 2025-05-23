@@ -32,6 +32,19 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true, // ✅ Add this to bypass ESLint errors during deployment
   },
+  // Add CORS headers for API routes to allow cross-origin requests
+  async headers() {
+    return [
+      {
+        source: '/api/:path*', // Apply to all API routes
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' }, // Allow all origins (for now)
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' }, // Allowed HTTP methods
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' }, // Allowed headers
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

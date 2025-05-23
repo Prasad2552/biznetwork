@@ -35,38 +35,13 @@ export async function GET() {
       })
     );
 
-    return new NextResponse(JSON.stringify({ posts: postsWithChannelInfo }), {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    return NextResponse.json({ posts: postsWithChannelInfo }, { status: 200 });
   } catch (error) {
     console.error('Error fetching blog posts:', error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to fetch blog posts' }), {
-      status: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    return NextResponse.json({ error: 'Failed to fetch blog posts' }, { status: 500 });
   } finally {
     if (client) {
       await client.close();
     }
   }
-}
-
-export function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
 }

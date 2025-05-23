@@ -1,74 +1,57 @@
+//middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+    const { pathname } = request.nextUrl;
+    const path = pathname;
 
-  // Handle CORS for API routes
-  if (pathname.startsWith('/api')) {
-    const headers = {
-      'Access-Control-Allow-Origin': 'https://www.biznetworq.com', // Specific origin for security
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
+    // Only run middleware for admin routes and specific non-admin paths
+    if (path.startsWith('/admin')) {
+        // Allow access to forgot password page
+        if (path === '/admin/forgot-password') {
+            return NextResponse.next();
+        }
 
-    // Handle preflight OPTIONS requests
-    if (request.method === 'OPTIONS') {
-      return new NextResponse(null, {
-        status: 204,
-        headers,
-      });
+        const token = await getToken({
+            req: request,
+            secret: process.env.NEXTAUTH_SECRET,
+        });
+
+        // Allow access to login page
+        if (path === '/admin/login') {
+            // If already logged in as admin, redirect to dashboard
+            if (token?.role === 'admin') {
+                return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+            }
+            return NextResponse.next();
+        }
+
+        // For all other admin routes, check if user is admin
+        if (!token?.role || token.role !== 'admin') {
+            const loginUrl = new URL('/admin/login', request.url);
+            loginUrl.searchParams.set('callbackUrl', path);
+            return NextResponse.redirect(loginUrl);
+        }
+    } else if (pathname.match(/^\/[^@]/) && !path.startsWith('/api')) {
+        const segments = pathname.split("/")
+        const firstSegment = segments[1]
+
+        // Only redirect if it's not a system path
+        const systemPaths = ["api", "login", "signup", "admin", "dashboard", "_next", "blog", "videos", "webinars", "podcasts", "testimonials", "demos", "ebook", "event", "case-studies", "white-papers", "infographics"]
+        if (!systemPaths.includes(firstSegment)) {
+            return NextResponse.redirect(new URL(`/@${firstSegment}`, request.url));
+        }
     }
 
-    // Apply CORS headers to all API responses
-    const response = NextResponse.next();
-    Object.entries(headers).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
-    return response;
-  }
-
-  // Admin authentication handling
-  if (pathname.startsWith('/admin')) {
-    if (pathname === '/admin/forgot-password') return NextResponse.next();
-
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-
-    if (pathname === '/admin/login') {
-      if (token?.role === 'admin') {
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-      }
-      return NextResponse.next();
-    }
-
-    if (!token?.role || token.role !== 'admin') {
-      const loginUrl = new URL('/admin/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  // Pretty URL redirect for public profile pages
-  if (pathname.match(/^\/[^@]/) && !pathname.startsWith('/api')) {
-    const segments = pathname.split('/');
-    const firstSegment = segments[1];
-    const systemPaths = [
-      'api', 'login', 'signup', 'admin', 'dashboard', '_next',
-      'blog', 'videos', 'webinars', 'podcasts', 'testimonials', 'demos',
-      'ebook', 'event', 'case-studies', 'white-papers', 'infographics',
-    ];
-    if (!systemPaths.includes(firstSegment)) {
-      return NextResponse.redirect(new URL(`/@${firstSegment}`, request.url));
-    }
-  }
-
-  return NextResponse.next();
+    return NextResponse.next();
 }
 
+// Specify paths for middleware to run on
 export const config = {
-  matcher: ['/:path*'],
+    matcher: [
+        '/admin/:path*',
+      /*  '/((?!api|_next/static|_next/image|favicon.ico).*)',*/ // Apply to all paths EXCEPT these
+    ],
 };

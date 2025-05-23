@@ -32,19 +32,40 @@ export async function GET(request: Request) {
       channelId: pdf.channelId,
     }));
 
-    documents.sort((a, b) =>
-      new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+    documents.sort(
+      (a, b) =>
+        new Date(b.dateUploaded).getTime() -
+        new Date(a.dateUploaded).getTime()
     );
 
-    const res = NextResponse.json(documents);
-    res.headers.set('Access-Control-Allow-Origin', 'https://www.biznetworq.com');
-    res.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-    return res;
+    return new NextResponse(JSON.stringify(documents), {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
   } catch (error) {
     console.error('Error fetching documents:', error);
-    const res = NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
-    res.headers.set('Access-Control-Allow-Origin', 'https://www.biznetworq.com');
-    return res;
+    return new NextResponse(JSON.stringify({ error: 'Failed to fetch documents' }), {
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
   }
+}
+
+export function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }

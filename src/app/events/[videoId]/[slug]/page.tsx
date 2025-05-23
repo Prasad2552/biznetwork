@@ -1,16 +1,15 @@
 import { Suspense } from 'react';
-import ClientVideoPage from './ClientVideoPage';
+import Home from '@/app/page';
 
 interface Params {
   videoId: string;
   slug: string;
 }
 
-export default async function VideoPage({ params }: { params: Promise<Params> }) {
-  const resolvedParams = await params;
+export default function VideoPage({ params }: { params: Promise<Params> }) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <ClientVideoPage params={resolvedParams} />
+      <Home params={params} />
     </Suspense>
   );
 }

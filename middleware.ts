@@ -5,7 +5,31 @@ import { getToken } from 'next-auth/jwt';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // === Admin authentication handling ===
+  // Handle CORS for API routes
+  if (pathname.startsWith('/api')) {
+    const headers = {
+      'Access-Control-Allow-Origin': 'https://www.biznetworq.com', // Specific origin for security
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    // Handle preflight OPTIONS requests
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 204,
+        headers,
+      });
+    }
+
+    // Apply CORS headers to all API responses
+    const response = NextResponse.next();
+    Object.entries(headers).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    return response;
+  }
+
+  // Admin authentication handling
   if (pathname.startsWith('/admin')) {
     if (pathname === '/admin/forgot-password') return NextResponse.next();
 
@@ -28,7 +52,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // === Pretty URL redirect for public profile pages ===
+  // Pretty URL redirect for public profile pages
   if (pathname.match(/^\/[^@]/) && !pathname.startsWith('/api')) {
     const segments = pathname.split('/');
     const firstSegment = segments[1];

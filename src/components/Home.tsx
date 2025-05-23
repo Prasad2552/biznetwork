@@ -168,48 +168,84 @@ function Home({ params }: VideoPageProps) {
         localStorage.setItem(`channel-${channelId}-subscribers`, count.toString());
     };
 
-    const handleViewCountUpdate = useCallback(async (id: string) => {
-        try {
-            const response = await fetch(`/api/videos/${id}/view`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                const errorMessage = errorData?.error || response.statusText;
-                console.error('Error updating video view count:', errorMessage);
-                toast.error(`Error updating view count: ${errorMessage}`, { position: 'top-right' });
-            }
-            const data = await response.json();
-            if (videos) {
-                setVideos(prevVideos =>
-                    prevVideos.map(video =>
-                        video._id === id ? { ...video, views: data.views } : video
-                    )
-                );
-            }
-
-            if (selectedVideo && selectedVideo._id === id) {
-                setSelectedVideo(prev => ({
-                    ...prev!,
-                    views: data.views
-                }));
-            }
-
-            if (featuredVideo && featuredVideo._id === id) {
-                setFeaturedVideo(prev => ({
-                    ...prev!,
-                    views: data.views
-                }));
-            }
-
-        } catch (error) {
-            console.error('Error updating video view count:', error);
-            toast.error('An error occurred while updating view count. Please try again.', { position: 'top-right' });
+    const handleViewCountUpdate = useCallback(async (id: string, contentType: string = 'video') => {
+    try {
+        // Determine the correct API endpoint based on content type
+        let apiEndpoint = '';
+        switch (contentType.toLowerCase()) {
+            case 'webinar':
+                apiEndpoint = `/api/webinars/${id}/view`;
+                break;
+            case 'podcast':
+                apiEndpoint = `/api/podcasts/${id}/view`;
+                break;
+            case 'demo':
+                apiEndpoint = `/api/demos/${id}/view`;
+                break;
+            case 'event':
+                apiEndpoint = `/api/events/${id}/view`;
+                break;
+            case 'video':
+            default:
+                apiEndpoint = `/api/videos/${id}/view`;
+                break;
         }
-    }, [videos, selectedVideo, featuredVideo, setFeaturedVideo, setVideos]);
+
+        console.log(`Updating view count for ${contentType} with ID: ${id}`);
+        
+        const response = await fetch(apiEndpoint, {
+            method: 'POST', // ✅ Changed from PUT to POST
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+
+        if (!response.ok) {
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData?.error || errorMessage;
+            } catch (jsonError) {
+                console.error('Failed to parse error response:', jsonError);
+            }
+            console.error('Error updating view count:', errorMessage);
+            toast.error(`Error updating view count: ${errorMessage}`, { position: 'top-right' });
+            return;
+        }
+
+        const data = await response.json();
+        console.log('View count updated successfully:', data);
+
+        // Update the appropriate state based on content type
+        if (contentType === 'video' && videos) {
+            setVideos(prevVideos =>
+                prevVideos.map(video =>
+                    video._id === id ? { ...video, views: data.views } : video
+                )
+            );
+        }
+
+        // Update selected video if it matches
+        if (selectedVideo && selectedVideo._id === id) {
+            setSelectedVideo(prev => ({
+                ...prev!,
+                views: data.views
+            }));
+        }
+
+        // Update featured video if it matches
+        if (featuredVideo && featuredVideo._id === id) {
+            setFeaturedVideo(prev => ({
+                ...prev!,
+                views: data.views
+            }));
+        }
+
+    } catch (error) {
+        console.error('Error updating view count:', error);
+        toast.error('An error occurred while updating view count. Please try again.', { position: 'top-right' });
+    }
+}, [videos, selectedVideo, featuredVideo, setFeaturedVideo, setVideos]);
 
     const handleHistoryUpdate = useCallback(async (id: string) => {
         try {
@@ -241,21 +277,24 @@ function Home({ params }: VideoPageProps) {
         handleUpNextVideoClick(video);
     };
 
-    const handleVideoView = useCallback(async (id: string, isFeatured = false) => {
-        const hasViewed = isFeatured ? hasFeaturedVideoBeenViewed : hasSelectedVideoBeenViewed;
+    const handleVideoView = useCallback(async (id: string, isFeatured = false, contentType: string = 'video') => {
+    const hasViewed = isFeatured ? hasFeaturedVideoBeenViewed : hasSelectedVideoBeenViewed;
 
-        if (!hasViewed) {
-            if (isFeatured) {
-                setHasFeaturedVideoBeenViewed(true);
-            } else {
-                setHasSelectedVideoBeenViewed(true);
-            }
-
-            await handleViewCountUpdate(id);
-            if (isUserLoggedIn) {
-                await handleHistoryUpdate(id);
-            }
+    if (!hasViewed) {
+        console.log(`Handling video view for ${contentType} ID: ${id}, isFeatured: ${isFeatured}`);
+        
+        if (isFeatured) {
+            setHasFeaturedVideoBeenViewed(true);
+        } else {
+            setHasSelectedVideoBeenViewed(true);
         }
+
+        await handleViewCountUpdate(id, contentType);
+        
+        if (isUserLoggedIn) {
+            await handleHistoryUpdate(id);
+        }
+    }
     }, [featuredVideo, hasFeaturedVideoBeenViewed, hasSelectedVideoBeenViewed, selectedVideo, setFeaturedVideo, setHasFeaturedVideoBeenViewed, setHasSelectedVideoBeenViewed, setVideos, videos, isUserLoggedIn, handleViewCountUpdate, handleHistoryUpdate]);
 
     const fetchVideoById = useCallback(async (id: string) => {

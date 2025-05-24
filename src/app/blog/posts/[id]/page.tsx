@@ -458,7 +458,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
           </main>
 
           {/* Aside section */}
-          <aside className="hidden lg:block w-60 flex-shrink-0">
+{/*           <aside className="hidden lg:block w-60 flex-shrink-0">
             <div className="sticky top-6">
               <h2 className="text-xl text-center font-semibold mb-4">Read more Blogs</h2>
               <div className="space-y-4">
@@ -496,7 +496,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                 ))}
               </div>
             </div>
-          </aside>
+          </aside> */}
         </div>
       </div>
 

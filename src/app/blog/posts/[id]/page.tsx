@@ -402,7 +402,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-1 ${hasLiked ? "text-blue-500" : "text-gray-600"}`}
                     >
                       <Image
-                        src={hasLiked ? `/Uploads/filledlike.svg` : `https://www.biznetworq.com/uploads/Like.svg`}
+                        src={hasLiked ? `/Uploads/filledlike.svg` : `/Uploads/Like.svg`}
                         alt="like"
                         width={40}
                         height={40}
@@ -414,7 +414,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-1 ${hasDisliked ? "text-red-500" : "text-gray-600"}`}
                     >
                       <Image
-                        src={`https://www.biznetworq.com/uploads/Dislike.png`}
+                        src={`/Uploads/Dislike.png`}
                         alt="dislike"
                         width={40}
                         height={40}
@@ -432,14 +432,14 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                   <div className="flex items-center space-x-2">
                     <button onClick={handleSave} className={isSaved ? "text-blue-500" : "text-gray-600"}>
                       <Image
-                        src={isSaved ? `https://www.biznetworq.com/Uploads/filledsaved.svg` : `https://www.biznetworq.com/Uploads/Save.png`}
+                        src={isSaved ? `/Uploads/filledsaved.svg` : `/Uploads/Save.png`}
                         alt="save"
                         width={40}
                         height={40}
                       />
                     </button>
                     <button onClick={handleShare}>
-                      <Image src="https://www.biznetworq.com/Uploads/Share.png" alt="share" width={40} height={40} />
+                      <Image src="/Uploads/Share.png" alt="share" width={40} height={40} />
                     </button>
                   </div>
                 </div>
@@ -458,7 +458,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
           </main>
 
           {/* Aside section */}
-{/*           <aside className="hidden lg:block w-60 flex-shrink-0">
+          {/* <aside className="hidden lg:block w-60 flex-shrink-0">
             <div className="sticky top-6">
               <h2 className="text-xl text-center font-semibold mb-4">Read more Blogs</h2>
               <div className="space-y-4">

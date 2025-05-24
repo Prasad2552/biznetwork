@@ -1,9 +1,5 @@
-// src/app/api/blog/posts/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient, ObjectId } from 'mongodb';
-
-const uri = process.env.MONGODB_URI!;
-const client = new MongoClient(uri);
 
 interface BlogPost {
   _id: ObjectId;
@@ -15,6 +11,7 @@ interface BlogPost {
   author?: string;
   channelName?: string;
   slug?: string;
+  featuredImage?: string;
 }
 
 interface Channel {
@@ -27,42 +24,54 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+
+  // Create a new MongoClient for this request
+  const uri = process.env.MONGODB_URI!;
+  const client = new MongoClient(uri, {
+    connectTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 5000,
+  });
+
   try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI is not defined');
+    }
+
     await client.connect();
+
     const database = client.db('biznetwork');
     const blogPostsCollection = database.collection('blogposts');
     const channelsCollection = database.collection('channels');
 
-    const { id } = await params; // Await the Promise to get the params object
+    const { id } = await params;
 
     let post: BlogPost | null;
-
     if (ObjectId.isValid(id)) {
-      post = await blogPostsCollection.findOne({ _id: new ObjectId(id) }) as BlogPost | null;
+      post = (await blogPostsCollection.findOne({ _id: new ObjectId(id) })) as BlogPost | null;
     } else {
-      post = await blogPostsCollection.findOne({ slug: id }) as BlogPost | null;
+      post = (await blogPostsCollection.findOne({ slug: id })) as BlogPost | null;
     }
 
     if (!post) {
+
       return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
     }
-
-    // Increment view count
+    
+    if (typeof post.views !== 'number') {
+      await blogPostsCollection.updateOne({ _id: post._id }, { $set: { views: 0 } });
+    }
     await blogPostsCollection.updateOne({ _id: post._id }, { $inc: { views: 1 } });
-    // Fetch updated post with new view count
-    post = await blogPostsCollection.findOne({ _id: post._id }) as BlogPost | null;
 
+    post = (await blogPostsCollection.findOne({ _id: post._id })) as BlogPost | null;
     if (!post) {
       return NextResponse.json({ error: 'Blog post not found after view increment' }, { status: 404 });
     }
 
-    // Fetch channel data using channelId
     let channel: Channel | null = null;
     if (post.channelId && ObjectId.isValid(post.channelId)) {
-      channel = await channelsCollection.findOne({ _id: new ObjectId(post.channelId) }) as Channel | null;
-    }
+      channel = (await channelsCollection.findOne({ _id: new ObjectId(post.channelId) })) as Channel | null;
+    } 
 
-    // Construct full channelLogo URL and set channel name
     if (channel && post) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
       post.channelLogo =
@@ -77,13 +86,15 @@ export async function GET(
       post.channelName = 'Unknown Channel';
     }
 
-    const postWithType = post ? { ...post, type: 'blogpost' as const } : null;
-
-    return NextResponse.json(postWithType);
+    return NextResponse.json({ ...post, type: 'blogpost' as const });
   } catch (error) {
-    console.error('Error fetching blog post:', error);
-    return NextResponse.json({ error: 'Failed to fetch blog post' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch blog post', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   } finally {
-    await client.close();
+
+    await client.close().catch((err) => console.error('[ERROR] Failed to close MongoDB connection:', err));
+    
   }
 }

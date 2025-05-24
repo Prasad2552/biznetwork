@@ -27,6 +27,12 @@ const nextConfig = {
         port: '',
         pathname: '/vi/**',
       },
+      {
+        protocol: 'https', // Use 'http' if your site isn’t on HTTPS yet
+        hostname: 'biznetworq.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   eslint: {

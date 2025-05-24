@@ -402,7 +402,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-1 ${hasLiked ? "text-blue-500" : "text-gray-600"}`}
                     >
                       <Image
-                        src={hasLiked ? `/Uploads/filledlike.svg` : `/Uploads/Like.svg`}
+                        src={hasLiked ? `/uploads/filledlike.svg` : `/uploads/Like.svg`}
                         alt="like"
                         width={40}
                         height={40}
@@ -414,7 +414,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-1 ${hasDisliked ? "text-red-500" : "text-gray-600"}`}
                     >
                       <Image
-                        src={`/Uploads/Dislike.png`}
+                        src={`/uploads/Dislike.png`}
                         alt="dislike"
                         width={40}
                         height={40}
@@ -432,14 +432,14 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                   <div className="flex items-center space-x-2">
                     <button onClick={handleSave} className={isSaved ? "text-blue-500" : "text-gray-600"}>
                       <Image
-                        src={isSaved ? `/Uploads/filledsaved.svg` : `/Uploads/Save.png`}
+                        src={isSaved ? `/uploads/filledsaved.svg` : `/uploads/Save.png`}
                         alt="save"
                         width={40}
                         height={40}
                       />
                     </button>
                     <button onClick={handleShare}>
-                      <Image src="/Uploads/Share.png" alt="share" width={40} height={40} />
+                      <Image src="/uploads/Share.png" alt="share" width={40} height={40} />
                     </button>
                   </div>
                 </div>

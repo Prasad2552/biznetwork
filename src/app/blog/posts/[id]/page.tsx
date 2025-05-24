@@ -1,194 +1,191 @@
-//src\app\blog\posts\[id]\page.tsx
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback, useRef, startTransition, use } from "react"
-import Image from "next/image"
-import { Card, CardContent } from "@/components/ui/card"
-import { format } from "date-fns"
-import dynamic from "next/dynamic"
-import Link from "next/link"
-import { CheckCircle, ArrowRight } from "lucide-react"
-import { useAuthCheck } from '@/hooks/useAuthCheck';
-import { useSession } from "next-auth/react"
-import { toast } from "react-toastify"
-import "react-toastify/dist/ReactToastify.css"
-import { useChannelFollow } from "@/hooks/useChannelFollow"
+import { useEffect, useState, useCallback, useRef, startTransition, use } from "react";
+import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
+import { format } from "date-fns";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { CheckCircle, ArrowRight } from "lucide-react";
+import { useAuthCheck } from "@/hooks/useAuthCheck";
+import { useSession } from "next-auth/react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useChannelFollow } from "@/hooks/useChannelFollow";
 
 // Dynamically import heavy components
-const Sidebar = dynamic(() => import("@/components/sidebar"), { ssr: false })
-const Header = dynamic(() => import("@/components/header"), { ssr: false })
+const Sidebar = dynamic(() => import("@/components/sidebar"), { ssr: false });
+const Header = dynamic(() => import("@/components/header"), { ssr: false });
 const ShareModal = dynamic(() => import("@/components/ShareModal"), {
   ssr: false,
   loading: () => <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full" />,
-})
+});
 
 interface BlogPost {
-  _id: string
-  title: string
-  content: string
-  author: string
-  createdAt: string
-  featuredImage?: string
-  channelId?: string
-  views?: number
-  likes?: number
-  dislikes?: number
-  slug?: string
-  channelLogo?: string
-  type?: "blogpost" | "technews"
+  _id: string;
+  title: string;
+  content: string;
+  author: string;
+  createdAt: string;
+  featuredImage?: string;
+  channelId?: string;
+  views?: number;
+  likes?: number;
+  dislikes?: number;
+  slug?: string;
+  channelLogo?: string;
+  type?: "blogpost" | "technews";
 }
 
 interface SidebarBlogPost {
-  _id: string
-  title: string
-  author: string
-  views: number
-  featuredImage?: string
-  slug?: string
-  channelLogo?: string
+  _id: string;
+  title: string;
+  author: string;
+  views: number;
+  featuredImage?: string;
+  slug?: string;
+  channelLogo?: string;
 }
 
 // Function to calculate estimated reading time
 const calculateReadingTime = (content: string): number => {
-  const text = content.replace(/<[^>]*>/g, "") // Remove HTML tags
-  const words = text.split(/\s+/).filter(Boolean) // Split into words and remove empty strings
-  const wordCount = words.length
-  const wordsPerMinute = 200 // Adjust this value as needed
-  const readingTime = Math.ceil(wordCount / wordsPerMinute)
-  const { token, isUserLoggedIn } = useAuthCheck();
-  return readingTime
-}
+  const text = content.replace(/<[^>]*>/g, ""); // Remove HTML tags
+  const words = text.split(/\s+/).filter(Boolean); // Split into words and remove empty strings
+  const wordCount = words.length;
+  const wordsPerMinute = 200; // Adjust this value as needed
+  return Math.ceil(wordCount / wordsPerMinute);
+};
 
 export default function BlogPost({ params }: { params: Promise<{ id: string }> }) {
-  const [post, setPost] = useState<BlogPost | null>(null)
-  const [relatedPosts, setRelatedPosts] = useState<SidebarBlogPost[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [activeSidebarItem, setActiveSidebarItem] = useState<string>("Home") // Added state for activeSidebarItem
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const { data: session } = useSession()
-  const userId = session?.user?.id || null
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [hasLiked, setHasLiked] = useState(false)
-  const [hasDisliked, setHasDisliked] = useState(false)
-  const [isSaved, setIsSaved] = useState(false)
-  const actionInProgress = useRef(false)
-  const { isFollowing, toggleFollow, isLoading, followerCount } = useChannelFollow(post?.channelId || "")
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [relatedPosts, setRelatedPosts] = useState<SidebarBlogPost[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSidebarItem, setActiveSidebarItem] = useState<string>("Home");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { data: session } = useSession();
+  const userId = session?.user?.id || null;
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [hasDisliked, setHasDisliked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const actionInProgress = useRef(false);
+  const { isFollowing, toggleFollow, isLoading, followerCount } = useChannelFollow(post?.channelId || "");
   const { token, isUserLoggedIn } = useAuthCheck();
 
-   const toggleSidebar = () => {
+  const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   // New state variable for reading time
-  const [readingTime, setReadingTime] = useState<number | null>(null)
+  const [readingTime, setReadingTime] = useState<number | null>(null);
 
   // Unwrap the params Promise using React.use()
-  const { id } = use(params)
+  const { id } = use(params);
 
   // Memoized fetch functions
   const fetchPost = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/blog/posts/${id}`)
-      if (!response.ok) throw new Error("Failed to fetch blog post")
-      return (await response.json()) as BlogPost
+      const response = await fetch(`/api/blog/posts/${id}`);
+      if (!response.ok) throw new Error("Failed to fetch blog post");
+      return (await response.json()) as BlogPost;
     } catch (error) {
-      setError("Error loading blog post")
-      console.error(error)
-      return null
+      setError("Error loading blog post");
+      console.error(error);
+      return null;
     }
-  }, [])
+  }, []);
 
   const fetchRelatedPosts = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/blog/related-posts/${id}`)
-      if (!response.ok) return []
-      const data = await response.json()
-      return data.posts.slice(0, 5)
+      const response = await fetch(`/api/blog/related-posts/${id}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.posts.slice(0, 5);
     } catch (error) {
-      console.error(error)
-      return []
+      console.error(error);
+      return [];
     }
-  }, [])
+  }, []);
 
   const fetchUserInteractions = useCallback(async (postId: string, userId: string) => {
     try {
-      const response = await fetch(`/api/users/interactions?postId=${postId}&userId=${userId}`)
-      if (!response.ok) return { hasLiked: false, hasDisliked: false, isSaved: false }
-      return await response.json()
+      const response = await fetch(`/api/users/interactions?postId=${postId}&userId=${userId}`);
+      if (!response.ok) return { hasLiked: false, hasDisliked: false, isSaved: false };
+      return await response.json();
     } catch (error) {
-      console.error("Error fetching user interaction:", error)
-      return { hasLiked: false, hasDisliked: false, isSaved: false }
+      console.error("Error fetching user interaction:", error);
+      return { hasLiked: false, hasDisliked: false, isSaved: false };
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const postData = await fetchPost(id)
-        if (!postData) return
+        const postData = await fetchPost(id);
+        if (!postData) return;
 
         startTransition(() => {
-          setPost(postData)
-          setIsLoggedIn(!!session?.user)
-        })
+          setPost(postData);
+          setIsLoggedIn(!!session?.user);
+        });
 
         // Parallel fetching of related posts and user interactions
         const [relatedData, interactions] = await Promise.all([
           fetchRelatedPosts(id),
           userId ? fetchUserInteractions(postData._id, userId) : Promise.resolve(null),
-        ])
+        ]);
 
         startTransition(() => {
-          setRelatedPosts(relatedData)
+          setRelatedPosts(relatedData);
           if (interactions) {
-            setHasLiked(interactions.hasLiked)
-            setHasDisliked(interactions.hasDisliked)
-            setIsSaved(interactions.isSaved)
+            setHasLiked(interactions.hasLiked);
+            setHasDisliked(interactions.hasDisliked);
+            setIsSaved(interactions.isSaved);
           }
-        })
+        });
       } catch (error) {
-        setError("Failed to load data")
-        console.error(error)
+        setError("Failed to load data");
+        console.error(error);
       }
-    }
+    };
 
-    loadData()
-  }, [id, session, userId, fetchPost, fetchRelatedPosts, fetchUserInteractions])
+    loadData();
+  }, [id, session, userId, fetchPost, fetchRelatedPosts, fetchUserInteractions]);
 
   // Calculate reading time whenever the post content changes
   useEffect(() => {
     if (post?.content) {
-      setReadingTime(calculateReadingTime(post.content))
+      setReadingTime(calculateReadingTime(post.content));
     }
-  }, [post?.content])
+  }, [post?.content]);
 
   const performAction = useCallback(
     async (action: () => Promise<void>, successMessage: string, errorMessage: string) => {
       if (actionInProgress.current) {
-        toast.warn("Please wait, action in progress...", { position: "top-right" })
-        return
+        toast.warn("Please wait, action in progress...", { position: "top-right" });
+        return;
       }
 
-      actionInProgress.current = true
+      actionInProgress.current = true;
       try {
-        await action()
-        toast.success(successMessage, { position: "top-right" })
+        await action();
+        toast.success(successMessage, { position: "top-right" });
       } catch (error) {
-        console.error("Action failed:", error)
-        toast.error(errorMessage, { position: "top-right" })
+        console.error("Action failed:", error);
+        toast.error(errorMessage, { position: "top-right" });
       } finally {
-        actionInProgress.current = false
+        actionInProgress.current = false;
       }
     },
     [],
-  )
+  );
 
   // Memoized interaction handlers
   const handleLike = useCallback(async () => {
     if (!userId || !post?._id) {
-      toast.warn("Please log in to like this post.", { position: "top-right" })
-      return
+      toast.warn("Please log in to like this post.", { position: "top-right" });
+      return;
     }
 
     await performAction(
@@ -197,11 +194,11 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ postId: post._id, userId }),
-        })
-        if (!response.ok) throw new Error("Failed to like the post")
+        });
+        if (!response.ok) throw new Error("Failed to like the post");
 
-        setHasLiked((prev) => !prev)
-        setHasDisliked(false)
+        setHasLiked((prev) => !prev);
+        setHasDisliked(false);
         setPost((prev) =>
           prev
             ? {
@@ -210,17 +207,17 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                 dislikes: hasDisliked ? (prev.dislikes || 1) - 1 : prev.dislikes,
               }
             : prev,
-        )
+        );
       },
       hasLiked ? "Like removed!" : "Post liked!",
       "Failed to update like. Please try again.",
-    )
-  }, [userId, post?._id, hasLiked, hasDisliked, performAction])
+    );
+  }, [userId, post?._id, hasLiked, hasDisliked, performAction]);
 
   const handleDislike = useCallback(async () => {
     if (!userId || !post?._id) {
-      toast.warn("Please log in to dislike this post.", { position: "top-right" })
-      return
+      toast.warn("Please log in to dislike this post.", { position: "top-right" });
+      return;
     }
 
     await performAction(
@@ -229,11 +226,11 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ postId: post._id, userId }),
-        })
-        if (!response.ok) throw new Error("Failed to dislike the post")
+        });
+        if (!response.ok) throw new Error("Failed to dislike the post");
 
-        setHasDisliked((prev) => !prev)
-        setHasLiked(false)
+        setHasDisliked((prev) => !prev);
+        setHasLiked(false);
         setPost((prev) =>
           prev
             ? {
@@ -242,17 +239,17 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                 likes: hasLiked ? (prev.likes || 1) - 1 : prev.likes,
               }
             : prev,
-        )
+        );
       },
       hasDisliked ? "Dislike removed!" : "Post disliked!",
       "Failed to update dislike. Please try again.",
-    )
-  }, [userId, post?._id, hasDisliked, hasLiked, performAction])
+    );
+  }, [userId, post?._id, hasDisliked, hasLiked, performAction]);
 
   const handleSave = useCallback(async () => {
     if (!userId || !post?._id) {
-      toast.warn("Please log in to save this post.", { position: "top-right" })
-      return
+      toast.warn("Please log in to save this post.", { position: "top-right" });
+      return;
     }
 
     await performAction(
@@ -260,49 +257,50 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
         const payload = {
           userId,
           ...(post?.type === "technews" ? { techNewsId: post._id } : { postId: post._id }),
-        }
+        };
         const response = await fetch("/api/users/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        })
-        if (!response.ok) throw new Error("Failed to save the post")
+        });
+        if (!response.ok) throw new Error("Failed to save the post");
 
-        setIsSaved((prev) => !prev)
+        setIsSaved((prev) => !prev);
       },
       isSaved ? "Post unsaved!" : "Post saved!",
       "Failed to save the post. Please try again.",
-    )
-  }, [userId, post?._id, isSaved, performAction, post?.type])
+    );
+  }, [userId, post?._id, isSaved, performAction, post?.type]);
 
   const handleShare = useCallback(async () => {
-    if (!post?.slug) return
+    if (!post?.slug) return;
 
-    const postUrl = `${window.location.origin}/blog/posts/${post.slug}`
+    const postUrl = `${window.location.origin}/blog/posts/${post.slug}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: post.title, url: postUrl })
-        toast.success("Post shared successfully!", { position: "top-right" })
+        await navigator.share({ title: post.title, url: postUrl });
+        toast.success("Post shared successfully!", { position: "top-right" });
       } else {
-        await navigator.clipboard.writeText(postUrl)
-        toast.success("Link copied to clipboard!", { position: "top-right" })
+        await navigator.clipboard.writeText(postUrl);
+        toast.success("Link copied to clipboard!", { position: "top-right" });
       }
     } catch (err) {
-      console.error("Sharing error:", err)
-      toast.error("Sharing failed. Please try again.", { position: "top-right" })
+      console.error("Sharing error:", err);
+      toast.error("Sharing failed. Please try again.", { position: "top-right" });
     }
-  }, [post?.slug, post?.title])
+  }, [post?.slug, post?.title]);
 
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
         <Sidebar
-                                    isSidebarOpen={isSidebarOpen}
-                                    toggleSidebar={toggleSidebar}
-                                    activeSidebarItem={activeSidebarItem}
-                                    setActiveSidebarItem={setActiveSidebarItem}
-                                    token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
-                                />
+          isSidebarOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          activeSidebarItem={activeSidebarItem}
+          setActiveSidebarItem={setActiveSidebarItem}
+          token={token || ""}
+          isUserLoggedIn={!!isUserLoggedIn}
+        />
         <div className="flex-1 flex flex-col min-h-screen w-full">
           <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           <div className="max-w-4xl mx-auto p-6">
@@ -310,7 +308,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!post) {
@@ -331,18 +329,19 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-     <Sidebar
-                                 isSidebarOpen={isSidebarOpen}
-                                 toggleSidebar={toggleSidebar}
-                                 activeSidebarItem={activeSidebarItem}
-                                 setActiveSidebarItem={setActiveSidebarItem}
-                                 token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
-                             />
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        activeSidebarItem={activeSidebarItem}
+        setActiveSidebarItem={setActiveSidebarItem}
+        token={token || ""}
+        isUserLoggedIn={!!isUserLoggedIn}
+      />
 
       <div className="flex-1 flex flex-col min-h-screen w-full">
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isLoggedIn={isLoggedIn} />
@@ -367,7 +366,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                   </div>
                 )}
 
-                {/* Author info and interactions remain the same */}
+                {/* Author info and interactions */}
                 <div className="flex items-center mb-4">
                   <Image
                     src={post.channelLogo || "/placeholder.svg"}
@@ -380,7 +379,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                     <span className="font-semibold">{post.author}</span>
                     <div className="text-sm text-gray-500">
                       <span>Published on Biz • </span>
-                      {/* Display calculated reading time */}
                       <span>
                         {readingTime === null ? "Calculating..." : `${readingTime} min read`} •
                       </span>
@@ -396,7 +394,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                   </button>
                 </div>
 
-                {/* Social interactions remain the same */}
+                {/* Social interactions */}
                 <div className="mt-6 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
@@ -404,7 +402,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-1 ${hasLiked ? "text-blue-500" : "text-gray-600"}`}
                     >
                       <Image
-                        src={hasLiked ? `/uploads/filledlike.svg` : `/uploads/Like.svg`}
+                        src={hasLiked ? `/Uploads/filledlike.svg` : `/Uploads/Like.svg`}
                         alt="like"
                         width={40}
                         height={40}
@@ -416,7 +414,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-1 ${hasDisliked ? "text-red-500" : "text-gray-600"}`}
                     >
                       <Image
-                        src={`/uploads/Dislike.png`}
+                        src={`/Uploads/Dislike.png`}
                         alt="dislike"
                         width={40}
                         height={40}
@@ -434,19 +432,19 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
                   <div className="flex items-center space-x-2">
                     <button onClick={handleSave} className={isSaved ? "text-blue-500" : "text-gray-600"}>
                       <Image
-                        src={isSaved ? `/uploads/filledsaved.svg` : `/uploads/Save.png`}
+                        src={isSaved ? `/Uploads/filledsaved.svg` : `/Uploads/Save.png`}
                         alt="save"
                         width={40}
                         height={40}
                       />
                     </button>
                     <button onClick={handleShare}>
-                      <Image src="/uploads/Share.png" alt="share" width={40} height={40} />
+                      <Image src="/Uploads/Share.png" alt="share" width={40} height={40} />
                     </button>
                   </div>
                 </div>
 
-                {/* Post content remains the same */}
+                {/* Post content */}
                 <div className="prose max-w-none mt-6" dangerouslySetInnerHTML={{ __html: post.content }} />
 
                 <div className="mt-4">
@@ -459,7 +457,7 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
             </Card>
           </main>
 
-          {/* Aside section - Modified for better positioning */}
+          {/* Aside section */}
           <aside className="hidden lg:block w-60 flex-shrink-0">
             <div className="sticky top-6">
               <h2 className="text-xl text-center font-semibold mb-4">Read more Blogs</h2>
@@ -509,5 +507,5 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
         title={post.title}
       />
     </div>
-  )
+  );
 }

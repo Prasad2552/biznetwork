@@ -34,6 +34,10 @@ const FeedbackIcon = ({ className }: { className?: string }) => (
   <Image src="/uploads/send-feedback.svg" alt="Feedback Icon" width={20} height={20} className={className} />
 );
 
+const ReviewIcon = ({ className }: { className?: string }) => (
+  <Image src="/uploads/review.png" alt="Feedback Icon" width={20} height={20} className={className} />
+);
+
 const HistoryIcon = ({ className, isActive }: { className?: string, isActive: boolean }) => (
   <Image
     src="/uploads/history.png"
@@ -359,6 +363,21 @@ export default function Sidebar({
               >
                 <FeedbackIcon className={`mr-3 w-5 h-5`} />
                 Send Feedback
+              </Button>
+            </Link>
+
+            <Link href="/review">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start ${
+                  activeSidebarItem === 'review'
+                    ? "bg-blue-50 text-blue-800 hover:bg-blue-100 hover:text-blue-600 rounded-full"
+                    : "text-[#323232]"
+                }`}
+                onClick={() => handleItemClick('review')}
+              >
+                <ReviewIcon className={`mr-3 w-5 h-5`} />
+                Review
               </Button>
             </Link>
 

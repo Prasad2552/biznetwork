@@ -1,3 +1,4 @@
+// src/app/api/videos/uploads/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import connectDB from '@/lib/mongodb';
@@ -6,6 +7,7 @@ import { slugify } from '@/utils/slugify';
 import { Types } from 'mongoose';
 import Video from '@/lib/models/Video';
 import { S3Client, PutObjectCommand, PutObjectCommandInput } from "@aws-sdk/client-s3";
+import Pusher from 'pusher'; // Import Pusher
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB max file size
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB max file size
@@ -27,14 +29,23 @@ const ALLOWED_FILE_TYPES = [
     'audio/mpeg',
     'audio/ogg',
     'audio/wav',
-  ];
+];
 
+// Initialize S3 client
 const s3Client = new S3Client({
     region: process.env.AWS_REGION!,
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
+});
+
+// Initialize Pusher client
+const pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID || '',
+    key: process.env.PUSHER_KEY || '',
+    secret: process.env.PUSHER_SECRET || '',
+    cluster: process.env.PUSHER_CLUSTER || '',
 });
 
 async function uploadFileToS3(file: File, userId: string, fileType: string): Promise<string | null> {
@@ -53,27 +64,27 @@ async function uploadFileToS3(file: File, userId: string, fileType: string): Pro
 
     try {
         await s3Client.send(new PutObjectCommand(uploadParams));
-        return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`
+        return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
     } catch (error) {
-        console.error("Failed to upload file to S3", error)
-        throw new Error("Failed to upload file to S3")
+        console.error("Failed to upload file to S3", error);
+        throw new Error("Failed to upload file to S3");
     }
 }
-
 
 export async function POST(request: NextRequest) {
     try {
         await connectDB();
-         const userId = uuidv4();
+        const userId = uuidv4();
         const formData = await request.formData();
-         const file = formData.get('video') as File | null;
+        const file = formData.get('video') as File | null;
         const thumbnailFile = formData.get('thumbnail') as File | null;
         const contentType = formData.get('contentType') as string | null;
         const title = formData.get('title') as string;
         const channelId = formData.get('channelId') as string;
-          const description = formData.get('description') as string | null; //Handle optional description
+        const description = formData.get('description') as string | null;
         const duration = formData.get('duration') as string | null;
-        const categories = formData.get('categories') as string | undefined; //Handle optional categories
+        const categories = formData.get('categories') as string | undefined;
+
         if (!file) {
             return NextResponse.json({ error: 'No video file uploaded' }, { status: 400 });
         }
@@ -89,57 +100,73 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Channel Id is required' }, { status: 400 });
         }
 
-        if(!ALLOWED_FILE_TYPES.includes(file.type)){
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
             return NextResponse.json({ error: `Invalid file type` }, { status: 400 });
         }
 
-        if(file.size > MAX_FILE_SIZE){
-           return NextResponse.json({ error: 'File size exceeds the 50MB limit' }, { status: 400 });
-        }
-      if (thumbnailFile) {
-        if (!ALLOWED_IMAGE_TYPES.includes(thumbnailFile.type)) {
-             return NextResponse.json({ error: 'Invalid image file type' }, { status: 400 });
+        if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json({ error: 'File size exceeds the 50MB limit' }, { status: 400 });
         }
 
-           if (thumbnailFile.size > MAX_IMAGE_SIZE) {
-           return NextResponse.json({ error: 'Image file size exceeds the 2MB limit' }, { status: 400 });
-          }
+        if (thumbnailFile) {
+            if (!ALLOWED_IMAGE_TYPES.includes(thumbnailFile.type)) {
+                return NextResponse.json({ error: 'Invalid image file type' }, { status: 400 });
+            }
+
+            if (thumbnailFile.size > MAX_IMAGE_SIZE) {
+                return NextResponse.json({ error: 'Image file size exceeds the 2MB limit' }, { status: 400 });
+            }
         }
-        
+
         // Upload files to S3
-         const [fileUrl, thumbnailUrl] = await Promise.all([
+        const [fileUrl, thumbnailUrl] = await Promise.all([
             uploadFileToS3(file, userId, contentType === 'podcasts' ? 'podcasts' : 'videos'),
-            thumbnailFile ? uploadFileToS3(thumbnailFile, userId, contentType === 'podcasts' ? 'podcast_thumb' : 'video_thumb') : Promise.resolve(null)
-          ]);
+            thumbnailFile ? uploadFileToS3(thumbnailFile, userId, contentType === 'podcasts' ? 'podcast_thumb' : 'video_thumb') : Promise.resolve(null),
+        ]);
 
-          let parsedCategories: string[] = [];
-           if (categories) {
-             try {
-             parsedCategories = JSON.parse(categories) as string[];
-            } catch(e) {
-             console.error('Failed to parse categories', e);
-               parsedCategories = []
-              }
-           }
+        let parsedCategories: string[] = [];
+        if (categories) {
+            try {
+                parsedCategories = JSON.parse(categories) as string[];
+            } catch (e) {
+                console.error('Failed to parse categories', e);
+                parsedCategories = [];
+            }
+        }
 
-          const newContent = new Video({
+        const newContent = new Video({
             channelId: new Types.ObjectId(channelId),
             title,
             description,
-              videoUrl: fileUrl,
+            videoUrl: fileUrl,
             thumbnailUrl: thumbnailUrl,
             status: 'draft',
-              duration,
-              categories: parsedCategories, //use the parsed categories
-               type: contentType === 'podcasts' ? 'podcast' : contentType === 'webinars' ? 'webinar' : contentType === 'testimonials' ? 'testimonial': contentType === 'demos' ? 'demo' :'video',
-             slug: slugify(title)
-          });
-          await newContent.save();
-            await Channel.findByIdAndUpdate(channelId, { $inc: { videoCount: 1 } });
+            duration,
+            categories: parsedCategories,
+            type: contentType === 'podcasts' ? 'podcast' : contentType === 'webinars' ? 'webinar' : contentType === 'testimonials' ? 'testimonial' : contentType === 'demos' ? 'demo' : 'video',
+            slug: slugify(title),
+        });
 
-            return NextResponse.json({ videoId: newContent._id, title, channelId }, { status: 201 });
+        await newContent.save();
+        await Channel.findByIdAndUpdate(channelId, { $inc: { videoCount: 1 } });
+
+        // Trigger Pusher notification
+        try {
+    await pusher.trigger('notifications', 'new-upload', {
+        message: `New ${newContent.type} uploaded: ${title}`,
+    });
+    console.log('Pusher notification triggered successfully:', {
+        channel: 'notifications',
+        event: 'new-upload',
+        message: `New ${newContent.type} uploaded: ${title}`,
+    });
+} catch (error) {
+    console.error('Failed to trigger Pusher notification:', error);
+}
+
+        return NextResponse.json({ videoId: newContent._id, title, channelId }, { status: 201 });
     } catch (error) {
         console.error('Error saving files or updating count:', error);
-         return NextResponse.json({ error: 'Failed to save files or update channel count', details: error instanceof Error ? error.message : 'Unknown error'}, { status: 500 });
+        return NextResponse.json({ error: 'Failed to save files or update channel count', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }

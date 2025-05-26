@@ -129,7 +129,7 @@ export default function SignIn() {
           {/* Left side - Illustration */}
           <div className="w-full lg:w-1/2 bg-[#f5f5f5] rounded-2xl p-8">
             <Image
-              src="/Uploads/login.webp" // Fixed space in filename
+              src="/uploads/login.webp" // Fixed space in filename
               alt="Sign in illustration"
               width={600}
               height={500}
@@ -141,7 +141,7 @@ export default function SignIn() {
           {/* Right side - Sign in form */}
           <div className="w-full lg:w-[400px] bg-white rounded-2xl p-8 justify-items-center">
             <div className="mb-8">
-              <Image src="/Uploads/Logo.svg" alt="BizNetwork Logo" width={150} height={40} priority className="mb-6" />
+              <Image src="/uploads/Logo.svg" alt="BizNetwork Logo" width={150} height={40} priority className="mb-6" />
               <h2 className="text-[28px] font-semibold text-[#1a1a1a]">Welcome back!</h2>
               <p className="text-[#666666] mt-1">Please enter your details</p>
             </div>
@@ -208,7 +208,7 @@ export default function SignIn() {
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
               >
-                <Image src="/Uploads/Google-logo.png" alt="Google" width={20} height={20} className="mr-2" />
+                <Image src="/uploads/Google-logo.png" alt="Google" width={20} height={20} className="mr-2" />
                 Google
               </Button>
             </form>

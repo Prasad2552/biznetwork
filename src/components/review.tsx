@@ -13,10 +13,12 @@ const Review: React.FC = () => {
   const [service, setService] = useState('');
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+  const [isLoggedIn] = useState(false); 
 const [isSidebarOpen, setIsSidebarOpen] = useState(false)
  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
  const [activeSidebarItem, setActiveSidebarItem] = useState('review')
  const { isUserLoggedIn, isAdmin, handleLogout, token } = useAuthCheck();
+  const [activeNavItem] = useState('All')
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
   };
@@ -140,7 +142,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false)
                                                   token={token || ""} isUserLoggedIn={!!isUserLoggedIn}
                                               />
       <div className="flex-1 flex flex-col">
-        <Header toggleSidebar={() => {}} />
+       <Header  toggleSidebar={toggleSidebar} activeNavItem={activeNavItem} isLoggedIn={isLoggedIn}/>
         <main className="flex-1 p-6 bg-gray-50 flex items-center justify-center">
           <div className="w-full w-full">
             <h1 className="text-2xl font-bold text-center mb-6">Write a Review</h1>

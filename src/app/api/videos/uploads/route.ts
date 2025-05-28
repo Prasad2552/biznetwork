@@ -1,4 +1,3 @@
-// src/app/api/videos/uploads/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import connectDB from '@/lib/mongodb';
@@ -6,8 +5,9 @@ import Channel from '@/lib/models/Channel';
 import { slugify } from '@/utils/slugify';
 import { Types } from 'mongoose';
 import Video from '@/lib/models/Video';
-import { S3Client, PutObjectCommand, PutObjectCommandInput } from "@aws-sdk/client-s3";
-import Pusher from 'pusher'; // Import Pusher
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { PutObjectCommandInput } from "@aws-sdk/client-s3"; // Ensure this import is present
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB max file size
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB max file size
@@ -31,7 +31,6 @@ const ALLOWED_FILE_TYPES = [
     'audio/wav',
 ];
 
-// Initialize S3 client
 const s3Client = new S3Client({
     region: process.env.AWS_REGION!,
     credentials: {
@@ -40,54 +39,38 @@ const s3Client = new S3Client({
     },
 });
 
-// Initialize Pusher client
-const pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID || '',
-    key: process.env.PUSHER_KEY || '',
-    secret: process.env.PUSHER_SECRET || '',
-    cluster: process.env.PUSHER_CLUSTER || '',
-});
-
-async function uploadFileToS3(file: File, userId: string, fileType: string): Promise<string | null> {
-    if (!file) return null;
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${fileType}_${userId}_${uuidv4()}.${fileExtension}`;
-
-    const uploadParams: PutObjectCommandInput = {
+async function generatePresignedUrl(key: string, contentType: string, fileType: string): Promise<string | null> {
+    const ContentType = fileType === 'video' ? (contentType === 'podcasts' ? 'audio/mpeg' : 'video/mp4') : (contentType === 'podcasts' ? 'image/jpeg' : 'image/jpeg');
+    const params: PutObjectCommandInput = {
         Bucket: process.env.AWS_BUCKET_NAME!,
-        Key: fileName,
-        Body: buffer,
-        ContentType: file.type,
+        Key: key,
+        ContentType: ContentType, // Corrected: Use the local variable
     };
 
     try {
-        await s3Client.send(new PutObjectCommand(uploadParams));
-        return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+        const command = new PutObjectCommand(params);
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour (3600 seconds)
+        console.log(`Generated pre-signed URL for ${fileType}:`, url); // Log the URL
+
+        return url;
     } catch (error) {
-        console.error("Failed to upload file to S3", error);
-        throw new Error("Failed to upload file to S3");
+        console.error(`Failed to generate pre-signed URL for ${fileType}:`, error);
+        return null;
     }
 }
+
 
 export async function POST(request: NextRequest) {
     try {
         await connectDB();
         const userId = uuidv4();
         const formData = await request.formData();
-        const file = formData.get('video') as File | null;
-        const thumbnailFile = formData.get('thumbnail') as File | null;
         const contentType = formData.get('contentType') as string | null;
         const title = formData.get('title') as string;
         const channelId = formData.get('channelId') as string;
         const description = formData.get('description') as string | null;
         const duration = formData.get('duration') as string | null;
         const categories = formData.get('categories') as string | undefined;
-
-        if (!file) {
-            return NextResponse.json({ error: 'No video file uploaded' }, { status: 400 });
-        }
 
         if (!contentType) {
             return NextResponse.json({ error: 'Content type not specified' }, { status: 400 });
@@ -100,31 +83,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Channel Id is required' }, { status: 400 });
         }
 
-        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-            return NextResponse.json({ error: `Invalid file type` }, { status: 400 });
-        }
 
-        if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json({ error: 'File size exceeds the 50MB limit' }, { status: 400 });
-        }
+        // Generate pre-signed URLs
+        const fileKey = `${contentType === 'podcasts' ? 'podcasts' : 'videos'}/${userId}_${uuidv4()}`;
+        const filePresignedUrl = await generatePresignedUrl(fileKey, contentType, 'video');
 
-        if (thumbnailFile) {
-            if (!ALLOWED_IMAGE_TYPES.includes(thumbnailFile.type)) {
-                return NextResponse.json({ error: 'Invalid image file type' }, { status: 400 });
-            }
+        const thumbnailKey = `${contentType === 'podcasts' ? 'podcast_thumb' : 'video_thumb'}/${userId}_${uuidv4()}`;
+        const thumbnailPresignedUrl = await generatePresignedUrl(thumbnailKey, contentType, 'thumbnail');
 
-            if (thumbnailFile.size > MAX_IMAGE_SIZE) {
-                return NextResponse.json({ error: 'Image file size exceeds the 2MB limit' }, { status: 400 });
-            }
-        }
 
-        // Upload files to S3
-        const [fileUrl, thumbnailUrl] = await Promise.all([
-            uploadFileToS3(file, userId, contentType === 'podcasts' ? 'podcasts' : 'videos'),
-            thumbnailFile ? uploadFileToS3(thumbnailFile, userId, contentType === 'podcasts' ? 'podcast_thumb' : 'video_thumb') : Promise.resolve(null),
-        ]);
-
-        let parsedCategories: string[] = [];
+        let parsedCategories: string[] = []; // Corrected type declaration
         if (categories) {
             try {
                 parsedCategories = JSON.parse(categories) as string[];
@@ -134,39 +102,25 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        const newContent = new Video({
+        const newVideo = new Video({
             channelId: new Types.ObjectId(channelId),
             title,
             description,
-            videoUrl: fileUrl,
-            thumbnailUrl: thumbnailUrl,
-            status: 'draft',
+            videoUrl: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+            thumbnailUrl: thumbnailPresignedUrl ? `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${thumbnailKey}` : null,
+            status: 'processing',
             duration,
             categories: parsedCategories,
             type: contentType === 'podcasts' ? 'podcast' : contentType === 'webinars' ? 'webinar' : contentType === 'testimonials' ? 'testimonial' : contentType === 'demos' ? 'demo' : 'video',
-            slug: slugify(title),
+            slug: slugify(title)
         });
-
-        await newContent.save();
+        await newVideo.save();
         await Channel.findByIdAndUpdate(channelId, { $inc: { videoCount: 1 } });
 
-        // Trigger Pusher notification
-        try {
-    await pusher.trigger('notifications', 'new-upload', {
-        message: `New ${newContent.type} uploaded: ${title}`,
-    });
-    console.log('Pusher notification triggered successfully:', {
-        channel: 'notifications',
-        event: 'new-upload',
-        message: `New ${newContent.type} uploaded: ${title}`,
-    });
-} catch (error) {
-    console.error('Failed to trigger Pusher notification:', error);
-}
+        return NextResponse.json({ videoId: newVideo._id, title, channelId, filePresignedUrl, thumbnailPresignedUrl }, { status: 201 });
 
-        return NextResponse.json({ videoId: newContent._id, title, channelId }, { status: 201 });
     } catch (error) {
-        console.error('Error saving files or updating count:', error);
-        return NextResponse.json({ error: 'Failed to save files or update channel count', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+        console.error('Error creating presigned URL or saving video:', error);
+        return NextResponse.json({ error: 'Failed to create pre-signed URL or save video', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
 }

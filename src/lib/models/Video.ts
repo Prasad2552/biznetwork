@@ -1,5 +1,3 @@
-//src\lib\models\Video.ts
-
 import mongoose, { Schema, model, models } from 'mongoose';
 import { Video } from "@/types/common"; // Import the Video type
 
@@ -35,8 +33,8 @@ const videoSchema = new Schema<any>(
     },
     status: {
       type: String,
-      enum: ['draft', 'published'],
-      default: 'published'
+      enum: ['draft', 'published', 'processing', 'failed', 'processed'], // Added "processing" and "failed"
+      default: 'draft'
     },
     likes: {
       type: Number,

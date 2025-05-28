@@ -108,9 +108,9 @@ const handleContentClick = (item: any) => {
       <ToastContainer position="top-right" />
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">
+{/*           <h1 className="text-3xl font-bold tracking-tight">
             Welcome, {session?.user?.name || "User"}
-          </h1>
+          </h1> */}
           <p className="text-muted-foreground">
             View and manage your liked, saved, and disliked content
           </p>

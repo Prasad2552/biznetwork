@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import "react-toastify/dist/ReactToastify.css";
-
 const categoryOptions = {
   Technology: [
     "Information Technology (IT)",
@@ -297,6 +296,12 @@ interface UploadProps {
   contentType?: string;
 }
 
+
+interface UploadProps {
+  channelId: string;
+  contentType?: string;
+}
+
 export default function VideoUpload({
   channelId,
   contentType = "video",
@@ -311,8 +316,8 @@ export default function VideoUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
-    const [eventImages, setEventImages] = useState<File[]>([]);
-    const [eventImagePreviews, setEventImagePreviews] = useState<string[]>([]);
+  const [eventImages, setEventImages] = useState<File[]>([]);
+  const [eventImagePreviews, setEventImagePreviews] = useState<string[]>([]);
 
   const [videoDetails, setVideoDetails] = useState({
     title: "",
@@ -442,8 +447,7 @@ export default function VideoUpload({
     setUploadProgress(0);
 
     const formData = new FormData();
-    formData.append("video", videoFile);
-    formData.append("thumbnail", thumbnailFile);
+    // Don't include video/thumbnail files here!
     formData.append("channelId", channelId);
     formData.append("duration", videoDuration?.toString() || "0");
     formData.append("contentType", contentType);
@@ -451,39 +455,161 @@ export default function VideoUpload({
     formData.append("description", videoDetails.description);
     formData.append("categories", JSON.stringify(videoDetails.categories));
 
-            eventImages.forEach((image) => {
-                formData.append('eventImages', image); // Append multiple event images
-            });
+    eventImages.forEach((image) => {
+      formData.append("eventImages", image); // Append multiple event images
+    });
 
-    try {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) {
-          setUploadProgress(Math.round((e.loaded / e.total) * 100));
+       try {
+      // 1.  Get pre-signed URLs
+      const response = await fetch(getUploadEndpoint(), {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to get pre-signed URLs: ${errorData.error}`);
+      }
+
+      const data = await response.json();
+      const { filePresignedUrl, thumbnailPresignedUrl, videoId } = data;  // Get videoId
+      console.log("Video ID received from /api/videos/uploads:", videoId);
+
+      // 2. Upload video to S3 using pre-signed URL
+      const uploadVideo = async () => {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", filePresignedUrl, true);
+          xhr.setRequestHeader("Content-Type", videoFile.type);  // Corrected: Set Content-Type
+
+          xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          });
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              console.log("Video uploaded successfully");
+              resolve(true); // Resolve with true to indicate success
+            } else {
+              console.error("Video upload failed:", xhr.status, xhr.responseText);
+              reject(new Error(`Video upload failed with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => {
+            console.error("Video upload failed:", xhr.statusText);
+            reject(new Error(`Video upload failed with status: ${xhr.statusText}`));
+          };
+
+          xhr.send(videoFile);
+        });
+      };
+
+      // 3. Upload thumbnail to S3 using pre-signed URL
+      const uploadThumbnail = async () => {
+        if (!thumbnailPresignedUrl || !thumbnailFile) {
+          return true; // Resolve immediately if no thumbnail or presigned URL
         }
-      });
 
-      await new Promise((resolve, reject) => {
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const data = JSON.parse(xhr.response);
-            toast.success(`${contentType} uploaded successfully!`);
-            setTimeout(() => router.push(`/admin/dashboard/${channelId}`), 2000);
-            resolve(data);
-          } else {
-            reject(xhr.statusText);
-          }
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", thumbnailPresignedUrl, true);
+          xhr.setRequestHeader("Content-Type", thumbnailFile.type); // Corrected: Set Content-Type
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              console.log("Thumbnail uploaded successfully");
+              resolve(true); // Resolve with true to indicate success
+            } else {
+              console.error("Thumbnail upload failed:", xhr.status, xhr.responseText);
+              reject(new Error(`Thumbnail upload failed with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => {
+            console.error("Thumbnail upload failed:", xhr.statusText);
+            reject(new Error(`Thumbnail upload failed with status: ${xhr.statusText}`));
+          };
+
+          xhr.send(thumbnailFile);
+        });
+      };
+        //4. Upload event images
+        const uploadEventImage = async (image: File, index: number) => {
+            const formData = new FormData();
+            formData.append("image", image);
+
+            try {
+                //Get the image presigned url here (adapt as needed)
+                const response = await fetch("/api/upload-event-image", {
+                    method: "POST",
+                    body: formData,
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Failed to get pre-signed URLs: ${errorData.error}`);
+                }
+
+                const { eventImagePresignedUrl } = await response.json();
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("PUT", eventImagePresignedUrl, true);
+                    xhr.setRequestHeader("Content-Type", image.type);
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            console.log(`Event image ${index} uploaded successfully`);
+                            resolve(true);
+                        } else {
+                            console.error(`Event image ${index} upload failed:`, xhr.status, xhr.responseText);
+                            reject(new Error(`Event image ${index} upload failed with status ${xhr.status}`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        console.error(`Event image ${index} upload failed:`, xhr.statusText);
+                        reject(new Error(`Event image ${index} upload failed with status: ${xhr.statusText}`));
+                    };
+
+                    xhr.send(image);
+                });
+            } catch (error) {
+                console.error("Error uploading event image:", error);
+                throw error;
+            }
         };
+        //5. Process all uploads concurrently:
+        const uploadPromises = [uploadVideo(), uploadThumbnail()];
+        eventImages.forEach((eventImage, index) => {
+            uploadPromises.push(uploadEventImage(eventImage, index));
+        });
 
-          xhr.onerror = () => reject("Network error");
-          xhr.open("POST", getUploadEndpoint());
-          xhr.send(formData);
+        await Promise.all(uploadPromises);
+      // 6.  Update the video status to 'processed'
+      console.log("Updating video status for videoId:", videoId);
+      const statusResponse = await fetch(`/api/videos/uploads/${videoId}/process`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "processed" }),
       });
+
+      if (!statusResponse.ok) {
+        const statusError = await statusResponse.json();
+        console.error("Failed to update video status:", statusError);
+        throw new Error(`Failed to update video status: ${statusError.error}`);
+      }
+        console.log("Video and thumbnail uploaded successfully!");
+        toast.success(`${contentType} uploaded successfully!`);
+        setTimeout(() => router.push(`/admin/dashboard/${channelId}`), 2000);
+
     } catch (error) {
       console.error(`Error uploading ${contentType}:`, error);
       toast.error(typeof error === "string" ? error : "Upload failed");
     } finally {
       setIsUploading(false);
+      setUploadProgress(0); // Reset progress
     }
   };
 

@@ -51,7 +51,7 @@ const HistoryIcon = ({ className, isActive }: { className?: string, isActive: bo
 
 const LikedIcon = ({ className, isActive }: { className?: string, isActive: boolean }) => (
   <Image
-    src="/uploads/Heart.png"
+    src="/uploads/heart.png"
     alt="Liked Icon"
     width={20}
     height={20}

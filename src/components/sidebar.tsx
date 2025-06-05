@@ -1,5 +1,3 @@
-// src/components/sidebar.tsx
-
 'use client'
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button"
@@ -13,7 +11,7 @@ import { useSession } from 'next-auth/react';
 import { usePathname } from "next/navigation";
 import { useAuthCheck } from '@/hooks/useAuthCheck';
 
-// Icon Components (unchanged)
+// Icon Components
 const PublishIcon = ({ className }: { className?: string }) => (
   <Image src="/uploads/publish-with-us.svg" alt="Publish Icon" width={20} height={20} className={className} />
 );
@@ -35,7 +33,7 @@ const FeedbackIcon = ({ className }: { className?: string }) => (
 );
 
 const ReviewIcon = ({ className }: { className?: string }) => (
-  <Image src="/uploads/review.png" alt="Feedback Icon" width={20} height={20} className={className} />
+  <Image src="/uploads/review.png" alt="Review Icon" width={20} height={20} className={className} />
 );
 
 const HistoryIcon = ({ className, isActive }: { className?: string, isActive: boolean }) => (
@@ -120,24 +118,22 @@ const TrendIcon = ({ className, isActive }: { className?: string, isActive: bool
   </svg>
 );
 
-// Updated SidebarProps interface
 interface SidebarProps {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   activeSidebarItem: string;
   setActiveSidebarItem: (item: string) => void;
-  token: string; // Added to match props passed from parent
-  isUserLoggedIn: boolean; // Added to match props passed from parent
+  token: string;
+  isUserLoggedIn: boolean;
 }
 
-// Updated Sidebar component with new props
 export default function Sidebar({
   isSidebarOpen,
   toggleSidebar,
   activeSidebarItem,
   setActiveSidebarItem,
-  token, // Added
-  isUserLoggedIn, // Added
+  token,
+  isUserLoggedIn,
 }: SidebarProps) {
   const { isAdmin } = useAuthCheck();
   const [isExploreOpen, setIsExploreOpen] = useState(true);
@@ -189,9 +185,9 @@ export default function Sidebar({
   return (
     <aside
       className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out flex flex-col
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:h-screen
+        fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-all duration-300 ease-in-out flex flex-col will-change-transform
+        ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
+        md:relative md:translate-x-0 md:opacity-100 md:h-screen
       `}
     >
       <div className="flex items-center justify-between p-4">

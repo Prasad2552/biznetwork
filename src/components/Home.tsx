@@ -188,7 +188,6 @@ function Home({ params }: VideoPageProps) {
                 break;
         }
 
-        console.log(`Updating view count for ${contentType} with ID: ${id}`);
         
         const response = await fetch(apiEndpoint, {
             method: 'POST', // ✅ Changed from PUT to POST
@@ -211,7 +210,6 @@ function Home({ params }: VideoPageProps) {
         }
 
         const data = await response.json();
-        console.log('View count updated successfully:', data);
 
         // Update the appropriate state based on content type
         if (contentType === 'video' && videos) {
@@ -278,7 +276,6 @@ function Home({ params }: VideoPageProps) {
     const hasViewed = isFeatured ? hasFeaturedVideoBeenViewed : hasSelectedVideoBeenViewed;
 
     if (!hasViewed) {
-        console.log(`Handling video view for ${contentType} ID: ${id}, isFeatured: ${isFeatured}`);
         
         if (isFeatured) {
             setHasFeaturedVideoBeenViewed(true);

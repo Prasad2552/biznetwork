@@ -599,9 +599,6 @@ function Home({ params }: VideoPageProps) {
                     <Button variant="ghost" size="icon" className="md:hidden mr-2" onClick={toggleSidebar}>
                         <Menu size={24} />
                     </Button>
-                    {session?.user?.name && (
-                        <div className="text-xl font-bold ml-2 md:hidden">Welcome, {session.user.name}</div>
-                    )}
                 </div>
                 <div className="flex-1 items-center md:max-w-xl mx-1 md:mx-4 md:flex">
                     <SearchInput />

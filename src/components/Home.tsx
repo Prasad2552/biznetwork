@@ -36,10 +36,7 @@ import { FeaturedVideoCard } from "@/components/FeaturedVideoCard";
 import { Video, type CaseStudy, Content, TechNews } from "@/types/common";
 import { useTechNews } from "@/hooks/useTechNews";
 
-const Sidebar = dynamic(() => import("@/components/sidebar"), {
-    ssr: false,
-    loading: () => <div className="w-64 bg-gray-100" />,
-});
+
 
 // Lazy loaded components
 const VideoList = React.lazy(() => import("@/components/VideoList"));

@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
   images: {
     remotePatterns: [
       {
@@ -28,7 +29,7 @@ const nextConfig = {
         pathname: '/vi/**',
       },
       {
-        protocol: 'https', // Use 'http' if your site isn’t on HTTPS yet
+        protocol: 'https',
         hostname: 'biznetworq.com',
         port: '',
         pathname: '/**',
@@ -36,17 +37,45 @@ const nextConfig = {
     ],
   },
   eslint: {
-    ignoreDuringBuilds: true, // ✅ Add this to bypass ESLint errors during deployment
+    ignoreDuringBuilds: true,
   },
-  // Add CORS headers for API routes to allow cross-origin requests
   async headers() {
     return [
+      // CORS for API
       {
-        source: '/api/:path*', // Apply to all API routes
+        source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' }, // Allow all origins (for now)
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' }, // Allowed HTTP methods
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' }, // Allowed headers
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
+        ],
+      },
+      // Caching for static files
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/fonts/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
     ];

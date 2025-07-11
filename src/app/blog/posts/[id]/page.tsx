@@ -47,11 +47,12 @@ interface SidebarBlogPost {
   channelLogo?: string;
 }
 
-type PageProps = {
-  params: {
-    id: string;
-  };
-};
+export default function BlogPostPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+
 
 
 const calculateReadingTime = (content: string): number => {

@@ -47,14 +47,12 @@ interface SidebarBlogPost {
   channelLogo?: string;
 }
 
-// Function to calculate estimated reading time
 const calculateReadingTime = (content: string): number => {
   const text = content.replace(/<[^>]*>/g, "");
   const wordCount = text.split(/\s+/).filter(Boolean).length;
   return Math.ceil(wordCount / 200);
 };
 
-// Author Info Component
 const AuthorInfo = ({
   author,
   channelLogo,
@@ -101,7 +99,6 @@ const AuthorInfo = ({
   </div>
 );
 
-// Interaction Buttons Component
 const InteractionButtons = ({
   hasLiked,
   hasDisliked,
@@ -183,7 +180,6 @@ const InteractionButtons = ({
   </div>
 );
 
-// Related Posts Component
 const RelatedPosts = ({ posts }: { posts: SidebarBlogPost[] }) => (
   <aside className="hidden lg:block w-72 flex-shrink-0">
     <div className="sticky top-6">
@@ -215,7 +211,6 @@ const RelatedPosts = ({ posts }: { posts: SidebarBlogPost[] }) => (
   </aside>
 );
 
-// Skeleton Loader Component
 const SkeletonLoader = () => (
   <div className="max-w-4xl mx-auto p-6">
     <div className="animate-pulse space-y-4">
@@ -231,7 +226,8 @@ const SkeletonLoader = () => (
   </div>
 );
 
-export default function BlogPost({ params }: { params: Promise<{ id: string }> }) {
+// CORRECTED FUNCTION SIGNATURE
+export default function BlogPost({ params }: { params: { id: string } }) {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<SidebarBlogPost[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -244,6 +240,8 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
   const [isSaved, setIsSaved] = useState(false);
   const actionInProgress = useRef(false);
   const { token, isUserLoggedIn } = useAuthCheck();
+  
+  // DIRECTLY ACCESS ID FROM PARAMS
   const { id } = params;
 
   const { 
@@ -252,7 +250,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     isLoading: isFollowLoading 
   } = useChannelFollow(post?.channelId || "");
 
-  // Fetch post data
   const fetchData = useCallback(async () => {
     try {
       const [postRes, relatedRes] = await Promise.all([
@@ -275,7 +272,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     }
   }, [id]);
 
-  // Fetch user interactions
   const fetchUserInteractions = useCallback(async (postId: string) => {
     if (!userId) return { hasLiked: false, hasDisliked: false, isSaved: false };
     
@@ -288,7 +284,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     }
   }, [userId]);
 
-  // Load all data
   useEffect(() => {
     const loadData = async () => {
       const { postData, relatedData } = await fetchData();
@@ -308,10 +303,8 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     loadData();
   }, [id, fetchData, fetchUserInteractions]);
 
-  // Calculate reading time
   const readingTime = post?.content ? calculateReadingTime(post.content) : null;
 
-  // Generic action handler
   const performAction = useCallback(
     async (action: () => Promise<void>, successMsg: string, errorMsg: string) => {
       if (actionInProgress.current) return;
@@ -330,7 +323,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     []
   );
 
-  // Like handler
   const handleLike = useCallback(async () => {
     if (!userId || !post?._id) {
       toast.warn("Please log in to like this post");
@@ -359,7 +351,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     );
   }, [userId, post, hasLiked, hasDisliked, performAction]);
 
-  // Dislike handler
   const handleDislike = useCallback(async () => {
     if (!userId || !post?._id) {
       toast.warn("Please log in to dislike this post");
@@ -388,7 +379,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     );
   }, [userId, post, hasDisliked, hasLiked, performAction]);
 
-  // Save handler
   const handleSave = useCallback(async () => {
     if (!userId || !post?._id) {
       toast.warn("Please log in to save this post");
@@ -418,7 +408,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     );
   }, [userId, post, isSaved, performAction]);
 
-  // Share handler
   const handleShare = useCallback(async () => {
     if (!post?.slug) return;
 
@@ -479,7 +468,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
         <div className="flex-1 flex flex-col md:flex-row p-6 gap-6">
-          {/* Main Content */}
           {!post ? (
             <SkeletonLoader />
           ) : (
@@ -543,7 +531,6 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
             </main>
           )}
 
-          {/* Related Posts */}
           {relatedPosts.length > 0 && <RelatedPosts posts={relatedPosts} />}
         </div>
       </div>

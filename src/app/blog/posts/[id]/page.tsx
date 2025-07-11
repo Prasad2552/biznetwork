@@ -249,8 +249,6 @@ export default function BlogPostPage({ params }: PageProps) {
   const actionInProgress = useRef(false);
   const { token, isUserLoggedIn } = useAuthCheck();
   
-  // DIRECTLY ACCESS ID FROM PARAMS
-  const { id } = params;
 
   const { 
     isFollowing, 

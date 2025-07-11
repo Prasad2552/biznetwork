@@ -51,6 +51,8 @@ type BlogPostPageProps = {
   params: {
     id: string;
   };
+};
+
 
 const calculateReadingTime = (content: string): number => {
   const text = content.replace(/<[^>]*>/g, "");

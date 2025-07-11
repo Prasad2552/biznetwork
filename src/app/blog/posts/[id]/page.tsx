@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, startTransition } from "react";
+import { useEffect, useState, useCallback, useRef, startTransition, use } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight } from "lucide-react";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
@@ -47,348 +47,208 @@ interface SidebarBlogPost {
   channelLogo?: string;
 }
 
-export default function BlogPostPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-
-
-
+// Function to calculate estimated reading time
 const calculateReadingTime = (content: string): number => {
-  const text = content.replace(/<[^>]*>/g, "");
-  const wordCount = text.split(/\s+/).filter(Boolean).length;
-  return Math.ceil(wordCount / 200);
+  const text = content.replace(/<[^>]*>/g, ""); // Remove HTML tags
+  const words = text.split(/\s+/).filter(Boolean); // Split into words and remove empty strings
+  const wordCount = words.length;
+  const wordsPerMinute = 200; // Adjust this value as needed
+  return Math.ceil(wordCount / wordsPerMinute);
 };
 
-const AuthorInfo = ({
-  author,
-  channelLogo,
-  readingTime,
-  createdAt,
-  isFollowing,
-  isLoading,
-  toggleFollow
-}: {
-  author: string;
-  channelLogo?: string;
-  readingTime: number | null;
-  createdAt: string;
-  isFollowing: boolean;
-  isLoading: boolean;
-  toggleFollow: () => void;
-}) => (
-  <div className="flex items-center mb-4">
-    <Image
-      src={channelLogo || "/placeholder.svg"}
-      alt={`${author} Logo`}
-      width={30}
-      height={30}
-      className="rounded-full mr-2"
-    />
-    <div>
-      <span className="font-semibold">{author}</span>
-      <div className="text-sm text-gray-500">
-        <span>Published on Biz • </span>
-        <span>
-          {readingTime === null ? "Calculating..." : `${readingTime} min read`} •
-        </span>
-        <span>{format(new Date(createdAt), "MMMM dd, yyyy")}</span>
-      </div>
-    </div>
-    <button
-      className="ml-auto bg-[#2A2FB8] text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-      onClick={toggleFollow}
-      disabled={isLoading}
-      aria-label={isFollowing ? "Unfollow channel" : "Follow channel"}
-    >
-      {isLoading ? "Processing..." : isFollowing ? "Unfollow" : "Follow"}
-    </button>
-  </div>
-);
-
-const InteractionButtons = ({
-  hasLiked,
-  hasDisliked,
-  isSaved,
-  likes,
-  dislikes,
-  views,
-  onLike,
-  onDislike,
-  onSave,
-  onShare
-}: {
-  hasLiked: boolean;
-  hasDisliked: boolean;
-  isSaved: boolean;
-  likes: number;
-  dislikes: number;
-  views: number;
-  onLike: () => void;
-  onDislike: () => void;
-  onSave: () => void;
-  onShare: () => void;
-}) => (
-  <div className="mt-6 flex items-center justify-between">
-    <div className="flex items-center space-x-4">
-      <button
-        onClick={onLike}
-        className={`flex items-center space-x-1 ${hasLiked ? "text-blue-500" : "text-gray-600"}`}
-        aria-label={hasLiked ? "Remove like" : "Like post"}
-      >
-        <Image
-          src={hasLiked ? `/uploads/filledlike.svg` : `/uploads/Like.svg`}
-          alt="Like"
-          width={24}
-          height={24}
-        />
-        <span>{likes}</span>
-      </button>
-      
-      <button
-        onClick={onDislike}
-        className={`flex items-center space-x-1 ${hasDisliked ? "text-red-500" : "text-gray-600"}`}
-        aria-label={hasDisliked ? "Remove dislike" : "Dislike post"}
-      >
-        <Image
-          src={`/uploads/Dislike.png`}
-          alt="Dislike"
-          width={24}
-          height={24}
-          className={hasDisliked ? "filter-red" : ""}
-        />
-        <span>{dislikes}</span>
-      </button>
-      
-      <span className="text-gray-600">{views} views</span>
-    </div>
-
-    <div className="flex items-center space-x-2">
-      <button 
-        onClick={onSave} 
-        className={isSaved ? "text-blue-500" : "text-gray-600"}
-        aria-label={isSaved ? "Unsave post" : "Save post"}
-      >
-        <Image
-          src={isSaved ? `/uploads/filledsaved.svg` : `/uploads/Save.png`}
-          alt="Save"
-          width={24}
-          height={24}
-        />
-      </button>
-      
-      <button 
-        onClick={onShare}
-        aria-label="Share post"
-      >
-        <Image src="/uploads/Share.png" alt="Share" width={24} height={24} />
-      </button>
-    </div>
-  </div>
-);
-
-const RelatedPosts = ({ posts }: { posts: SidebarBlogPost[] }) => (
-  <aside className="hidden lg:block w-72 flex-shrink-0">
-    <div className="sticky top-6">
-      <h2 className="text-xl font-semibold mb-4">Read more Blogs</h2>
-      <div className="space-y-4">
-        {posts.map(post => (
-          <Link href={`/blog/posts/${post.slug}`} key={post._id}>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="relative h-32 mb-2">
-                  <Image
-                    src={post.featuredImage || "/placeholder.svg"}
-                    alt={post.title}
-                    fill
-                    className="object-cover rounded-lg"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-                <h3 className="font-semibold text-sm mb-1 line-clamp-2">{post.title}</h3>
-                <div className="flex items-center text-xs text-gray-500">
-                  <span>{post.views} views</span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-    </div>
-  </aside>
-);
-
-const SkeletonLoader = () => (
-  <div className="max-w-4xl mx-auto p-6">
-    <div className="animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-3/4" />
-      <div className="h-4 bg-gray-200 rounded w-1/4" />
-      <div className="h-64 bg-gray-200 rounded" />
-      <div className="space-y-2">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-4 bg-gray-200 rounded w-full" />
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-// CORRECTED FUNCTION SIGNATURE
-export default function BlogPostPage({ params }: PageProps) {
-  const { id } = params;
+export default function BlogPost({ params }: { params: Promise<{ id: string }> }) {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<SidebarBlogPost[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSidebarItem, setActiveSidebarItem] = useState("Home");
+  const [activeSidebarItem, setActiveSidebarItem] = useState<string>("Home");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { data: session } = useSession();
   const userId = session?.user?.id || null;
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
   const [hasDisliked, setHasDisliked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const actionInProgress = useRef(false);
+  const { isFollowing, toggleFollow, isLoading, followerCount } = useChannelFollow(post?.channelId || "");
   const { token, isUserLoggedIn } = useAuthCheck();
-  
 
-  const { 
-    isFollowing, 
-    toggleFollow, 
-    isLoading: isFollowLoading 
-  } = useChannelFollow(post?.channelId || "");
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
-  const fetchData = useCallback(async () => {
+  // New state variable for reading time
+  const [readingTime, setReadingTime] = useState<number | null>(null);
+
+  // Unwrap the params Promise using React.use()
+  const { id } = use(params);
+
+  // Memoized fetch functions
+  const fetchPost = useCallback(async (id: string) => {
     try {
-      const [postRes, relatedRes] = await Promise.all([
-        fetch(`/api/blog/posts/${id}`),
-        fetch(`/api/blog/related-posts/${id}`)
-      ]);
-
-      if (!postRes.ok) throw new Error("Failed to fetch blog post");
-      const postData: BlogPost = await postRes.json();
-
-      const relatedData = relatedRes.ok 
-        ? (await relatedRes.json()).posts.slice(0, 5) 
-        : [];
-
-      return { postData, relatedData };
+      const response = await fetch(`/api/blog/posts/${id}`);
+      if (!response.ok) throw new Error("Failed to fetch blog post");
+      return (await response.json()) as BlogPost;
     } catch (error) {
-      setError("Error loading content");
+      setError("Error loading blog post");
       console.error(error);
-      return { postData: null, relatedData: [] };
+      return null;
     }
-  }, [id]);
+  }, []);
 
-  const fetchUserInteractions = useCallback(async (postId: string) => {
-    if (!userId) return { hasLiked: false, hasDisliked: false, isSaved: false };
-    
+  const fetchRelatedPosts = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/blog/related-posts/${id}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.posts.slice(0, 5);
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  }, []);
+
+  const fetchUserInteractions = useCallback(async (postId: string, userId: string) => {
     try {
       const response = await fetch(`/api/users/interactions?postId=${postId}&userId=${userId}`);
-      return response.ok ? await response.json() : { hasLiked: false, hasDisliked: false, isSaved: false };
+      if (!response.ok) return { hasLiked: false, hasDisliked: false, isSaved: false };
+      return await response.json();
     } catch (error) {
-      console.error("Interaction fetch error:", error);
+      console.error("Error fetching user interaction:", error);
       return { hasLiked: false, hasDisliked: false, isSaved: false };
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
-      const { postData, relatedData } = await fetchData();
-      if (!postData) return;
+      try {
+        const postData = await fetchPost(id);
+        if (!postData) return;
 
-      const interactions = await fetchUserInteractions(postData._id);
-      
-      startTransition(() => {
-        setPost(postData);
-        setRelatedPosts(relatedData);
-        setHasLiked(interactions.hasLiked);
-        setHasDisliked(interactions.hasDisliked);
-        setIsSaved(interactions.isSaved);
-      });
+        startTransition(() => {
+          setPost(postData);
+          setIsLoggedIn(!!session?.user);
+        });
+
+        // Parallel fetching of related posts and user interactions
+        const [relatedData, interactions] = await Promise.all([
+          fetchRelatedPosts(id),
+          userId ? fetchUserInteractions(postData._id, userId) : Promise.resolve(null),
+        ]);
+
+        startTransition(() => {
+          setRelatedPosts(relatedData);
+          if (interactions) {
+            setHasLiked(interactions.hasLiked);
+            setHasDisliked(interactions.hasDisliked);
+            setIsSaved(interactions.isSaved);
+          }
+        });
+      } catch (error) {
+        setError("Failed to load data");
+        console.error(error);
+      }
     };
 
     loadData();
-  }, [id, fetchData, fetchUserInteractions]);
+  }, [id, session, userId, fetchPost, fetchRelatedPosts, fetchUserInteractions]);
 
-  const readingTime = post?.content ? calculateReadingTime(post.content) : null;
+  // Calculate reading time whenever the post content changes
+  useEffect(() => {
+    if (post?.content) {
+      setReadingTime(calculateReadingTime(post.content));
+    }
+  }, [post?.content]);
 
   const performAction = useCallback(
-    async (action: () => Promise<void>, successMsg: string, errorMsg: string) => {
-      if (actionInProgress.current) return;
-      actionInProgress.current = true;
+    async (action: () => Promise<void>, successMessage: string, errorMessage: string) => {
+      if (actionInProgress.current) {
+        toast.warn("Please wait, action in progress...", { position: "top-right" });
+        return;
+      }
 
+      actionInProgress.current = true;
       try {
         await action();
-        toast.success(successMsg, { position: "top-right" });
+        toast.success(successMessage, { position: "top-right" });
       } catch (error) {
-        console.error("Action error:", error);
-        toast.error(errorMsg, { position: "top-right" });
+        console.error("Action failed:", error);
+        toast.error(errorMessage, { position: "top-right" });
       } finally {
         actionInProgress.current = false;
       }
     },
-    []
+    [],
   );
 
+  // Memoized interaction handlers
   const handleLike = useCallback(async () => {
     if (!userId || !post?._id) {
-      toast.warn("Please log in to like this post");
+      toast.warn("Please log in to like this post.", { position: "top-right" });
       return;
     }
 
     await performAction(
       async () => {
-        const res = await fetch("/api/users/like", {
+        const response = await fetch("/api/users/like", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId: post._id, userId })
+          body: JSON.stringify({ postId: post._id, userId }),
         });
-        if (!res.ok) throw new Error("Like action failed");
+        if (!response.ok) throw new Error("Failed to like the post");
 
-        setHasLiked(prev => !prev);
+        setHasLiked((prev) => !prev);
         setHasDisliked(false);
-        setPost(prev => prev ? {
-          ...prev,
-          likes: hasLiked ? (prev.likes || 1) - 1 : (prev.likes || 0) + 1,
-          dislikes: hasDisliked ? (prev.dislikes || 1) - 1 : prev.dislikes
-        } : prev);
+        setPost((prev) =>
+          prev
+            ? {
+                ...prev,
+                likes: hasLiked ? (prev.likes || 1) - 1 : (prev.likes || 0) + 1,
+                dislikes: hasDisliked ? (prev.dislikes || 1) - 1 : prev.dislikes,
+              }
+            : prev,
+        );
       },
       hasLiked ? "Like removed!" : "Post liked!",
-      "Like action failed"
+      "Failed to update like. Please try again.",
     );
-  }, [userId, post, hasLiked, hasDisliked, performAction]);
+  }, [userId, post?._id, hasLiked, hasDisliked, performAction]);
 
   const handleDislike = useCallback(async () => {
     if (!userId || !post?._id) {
-      toast.warn("Please log in to dislike this post");
+      toast.warn("Please log in to dislike this post.", { position: "top-right" });
       return;
     }
 
     await performAction(
       async () => {
-        const res = await fetch("/api/users/dislike", {
+        const response = await fetch("/api/users/dislike", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId: post._id, userId })
+          body: JSON.stringify({ postId: post._id, userId }),
         });
-        if (!res.ok) throw new Error("Dislike action failed");
+        if (!response.ok) throw new Error("Failed to dislike the post");
 
-        setHasDisliked(prev => !prev);
+        setHasDisliked((prev) => !prev);
         setHasLiked(false);
-        setPost(prev => prev ? {
-          ...prev,
-          dislikes: hasDisliked ? (prev.dislikes || 1) - 1 : (prev.dislikes || 0) + 1,
-          likes: hasLiked ? (prev.likes || 1) - 1 : prev.likes
-        } : prev);
+        setPost((prev) =>
+          prev
+            ? {
+                ...prev,
+                dislikes: hasDisliked ? (prev.dislikes || 1) - 1 : (prev.dislikes || 0) + 1,
+                likes: hasLiked ? (prev.likes || 1) - 1 : prev.likes,
+              }
+            : prev,
+        );
       },
       hasDisliked ? "Dislike removed!" : "Post disliked!",
-      "Dislike action failed"
+      "Failed to update dislike. Please try again.",
     );
-  }, [userId, post, hasDisliked, hasLiked, performAction]);
+  }, [userId, post?._id, hasDisliked, hasLiked, performAction]);
 
   const handleSave = useCallback(async () => {
     if (!userId || !post?._id) {
-      toast.warn("Please log in to save this post");
+      toast.warn("Please log in to save this post.", { position: "top-right" });
       return;
     }
 
@@ -396,53 +256,46 @@ export default function BlogPostPage({ params }: PageProps) {
       async () => {
         const payload = {
           userId,
-          ...(post?.type === "technews" 
-            ? { techNewsId: post._id } 
-            : { postId: post._id })
+          ...(post?.type === "technews" ? { techNewsId: post._id } : { postId: post._id }),
         };
-
-        const res = await fetch("/api/users/save", {
+        const response = await fetch("/api/users/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error("Save action failed");
+        if (!response.ok) throw new Error("Failed to save the post");
 
-        setIsSaved(prev => !prev);
+        setIsSaved((prev) => !prev);
       },
       isSaved ? "Post unsaved!" : "Post saved!",
-      "Save action failed"
+      "Failed to save the post. Please try again.",
     );
-  }, [userId, post, isSaved, performAction]);
+  }, [userId, post?._id, isSaved, performAction, post?.type]);
 
   const handleShare = useCallback(async () => {
     if (!post?.slug) return;
 
     const postUrl = `${window.location.origin}/blog/posts/${post.slug}`;
-    
     try {
       if (navigator.share) {
-        await navigator.share({ 
-          title: post.title, 
-          url: postUrl 
-        });
-        toast.success("Shared successfully!");
+        await navigator.share({ title: post.title, url: postUrl });
+        toast.success("Post shared successfully!", { position: "top-right" });
       } else {
         await navigator.clipboard.writeText(postUrl);
-        toast.success("Link copied to clipboard!");
+        toast.success("Link copied to clipboard!", { position: "top-right" });
       }
     } catch (err) {
       console.error("Sharing error:", err);
-      toast.error("Sharing failed");
+      toast.error("Sharing failed. Please try again.", { position: "top-right" });
     }
-  }, [post]);
+  }, [post?.slug, post?.title]);
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
         <Sidebar
           isSidebarOpen={isSidebarOpen}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          toggleSidebar={toggleSidebar}
           activeSidebarItem={activeSidebarItem}
           setActiveSidebarItem={setActiveSidebarItem}
           token={token || ""}
@@ -451,8 +304,27 @@ export default function BlogPostPage({ params }: PageProps) {
         <div className="flex-1 flex flex-col min-h-screen w-full">
           <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           <div className="max-w-4xl mx-auto p-6">
-            <div className="text-red-500 p-4 rounded-lg bg-red-50 border border-red-200">
-              {error}
+            <div className="text-red-500 p-4 rounded-lg bg-red-50 border border-red-200">{error}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+        <div className="flex-1 flex flex-col min-h-screen w-full">
+          <div className="max-w-4xl mx-auto p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4" />
+              <div className="h-4 bg-gray-200 rounded w-1/4" />
+              <div className="h-[400px] bg-gray-200 rounded" />
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-4 bg-gray-200 rounded w-full" />
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -461,10 +333,10 @@ export default function BlogPostPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       <Sidebar
         isSidebarOpen={isSidebarOpen}
-        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        toggleSidebar={toggleSidebar}
         activeSidebarItem={activeSidebarItem}
         setActiveSidebarItem={setActiveSidebarItem}
         token={token || ""}
@@ -472,75 +344,168 @@ export default function BlogPostPage({ params }: PageProps) {
       />
 
       <div className="flex-1 flex flex-col min-h-screen w-full">
-        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isLoggedIn={isLoggedIn} />
 
-        <div className="flex-1 flex flex-col md:flex-row p-6 gap-6">
-          {!post ? (
-            <SkeletonLoader />
-          ) : (
-            <main className="flex-1 max-w-4xl">
-              <Card>
-                <CardContent className="p-6">
-                  <h1 className="text-2xl md:text-3xl font-bold mb-4">{post.title}</h1>
-                  
-                  {post.featuredImage && (
-                    <div className="relative w-full h-64 md:h-[400px] mb-4">
-                      <Image
-                        src={post.featuredImage}
-                        alt={post.title}
-                        fill
-                        priority
-                        className="object-cover rounded-lg"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                    </div>
-                  )}
-
-                  <AuthorInfo
-                    author={post.author}
-                    channelLogo={post.channelLogo}
-                    readingTime={readingTime}
-                    createdAt={post.createdAt}
-                    isFollowing={isFollowing}
-                    isLoading={isFollowLoading}
-                    toggleFollow={toggleFollow}
-                  />
-
-                  <InteractionButtons
-                    hasLiked={hasLiked}
-                    hasDisliked={hasDisliked}
-                    isSaved={isSaved}
-                    likes={post.likes || 0}
-                    dislikes={post.dislikes || 0}
-                    views={post.views || 0}
-                    onLike={handleLike}
-                    onDislike={handleDislike}
-                    onSave={handleSave}
-                    onShare={handleShare}
-                  />
-
-                  <article 
-                    className="prose max-w-none mt-6" 
-                    dangerouslySetInnerHTML={{ __html: post.content }} 
-                  />
-
-                  <div className="mt-6">
-                    <Link 
-                      href={`/blog/posts/${post.slug}`} 
-                      className="text-blue-600 font-medium flex items-center gap-1"
-                    >
-                      Continue reading
-                      <ArrowRight className="text-blue-600" size={18} />
-                    </Link>
+        {/* Main content wrapper - Modified to use flex */}
+        <div className="flex-1 flex flex-row p-6 gap-6">
+          {/* Main content area */}
+          <main className="flex-1 max-w-4xl">
+            <Card>
+              <CardContent className="p-6">
+                <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
+                {post.featuredImage && (
+                  <div className="relative w-full h-[300px] mb-4">
+                    <Image
+                      src={post.featuredImage || "/placeholder.svg"}
+                      alt={post.title}
+                      fill
+                      priority
+                      className="object-cover rounded-lg"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            </main>
-          )}
+                )}
 
-          {relatedPosts.length > 0 && <RelatedPosts posts={relatedPosts} />}
+                {/* Author info and interactions */}
+                <div className="flex items-center mb-4">
+                  <Image
+                    src={post.channelLogo || "/placeholder.svg"}
+                    alt={`${post.author} Logo`}
+                    width={30}
+                    height={30}
+                    className="rounded-full mr-2"
+                  />
+                  <div>
+                    <span className="font-semibold">{post.author}</span>
+                    <div className="text-sm text-gray-500">
+                      <span>Published on Biz • </span>
+                      <span>
+                        {readingTime === null ? "Calculating..." : `${readingTime} min read`} •
+                      </span>
+                      <span>{format(new Date(post.createdAt), "MMMM dd, yyyy")}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="ml-auto bg-[#2A2FB8] text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                    onClick={toggleFollow}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Following..." : isFollowing ? "Unfollow" : "Follow"}
+                  </button>
+                </div>
+
+                {/* Social interactions */}
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={handleLike}
+                      className={`flex items-center space-x-1 ${hasLiked ? "text-blue-500" : "text-gray-600"}`}
+                    >
+                      <Image
+                        src={hasLiked ? `/uploads/filledlike.svg` : `/uploads/Like.svg`}
+                        alt="like"
+                        width={40}
+                        height={40}
+                      />
+                      <span>{post.likes}</span>
+                    </button>
+                    <button
+                      onClick={handleDislike}
+                      className={`flex items-center space-x-1 ${hasDisliked ? "text-red-500" : "text-gray-600"}`}
+                    >
+                      <Image
+                        src={`/uploads/Dislike.png`}
+                        alt="dislike"
+                        width={40}
+                        height={40}
+                        style={{
+                          filter: hasDisliked
+                            ? "invert(16%) sepia(91%) saturate(7477%) hue-rotate(359deg) brightness(98%) contrast(117%)"
+                            : "none",
+                        }}
+                      />
+                      <span>{post.dislikes}</span>
+                    </button>
+                    <span className="text-gray-600">{post.views} views</span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button onClick={handleSave} className={isSaved ? "text-blue-500" : "text-gray-600"}>
+                      <Image
+                        src={isSaved ? `/uploads/filledsaved.svg` : `/uploads/Save.png`}
+                        alt="save"
+                        width={40}
+                        height={40}
+                      />
+                    </button>
+                    <button onClick={handleShare}>
+                      <Image src="/uploads/Share.png" alt="share" width={40} height={40} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Post content */}
+                <div className="prose max-w-none mt-6" dangerouslySetInnerHTML={{ __html: post.content }} />
+
+                <div className="mt-4">
+                  <Link href={`/blog/posts/${post.slug}`} className="text-blue-600 font-medium flex items-center gap-1">
+                    View more
+                    <ArrowRight className="text-blue-600" size={18} />
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </main>
+
+          {/* Aside section */}
+          {/* <aside className="hidden lg:block w-60 flex-shrink-0">
+            <div className="sticky top-6">
+              <h2 className="text-xl text-center font-semibold mb-4">Read more Blogs</h2>
+              <div className="space-y-4">
+                {relatedPosts.map((relatedPost) => (
+                  <Link href={`/blog/posts/${relatedPost.slug}`} key={relatedPost._id}>
+                    <Card className="cursor-pointer hover:shadow-md transition-shadow border-none bg-gray-50">
+                      <CardContent className="p-4">
+                        <div className="relative h-32 mb-2">
+                          <Image
+                            src={relatedPost.featuredImage || "/placeholder.svg"}
+                            alt={relatedPost.title}
+                            fill
+                            className="object-cover rounded-lg"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          />
+                        </div>
+                        <h3 className="font-semibold text-sm mb-1 line-clamp-2">{relatedPost.title}</h3>
+                        <div className="flex items-center mb-1">
+                          <Image
+                            src={relatedPost.channelLogo || "/placeholder.svg"}
+                            alt={`${relatedPost.author} Logo`}
+                            width={20}
+                            height={20}
+                            className="rounded-full mr-1"
+                          />
+                          <span className="font-semibold text-sm mr-1">{relatedPost.author}</span>
+                          <CheckCircle size={14} className="text-blue-600" />
+                        </div>
+                        <div className="flex items-center ml-6 text-xs text-gray-500">
+                          <span>{relatedPost.views} views</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </aside> */}
         </div>
       </div>
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        shareUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/blog/posts/${post.slug}`}
+        title={post.title}
+      />
     </div>
   );
 }

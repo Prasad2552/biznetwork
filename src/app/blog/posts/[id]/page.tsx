@@ -47,7 +47,7 @@ interface SidebarBlogPost {
   channelLogo?: string;
 }
 
-type BlogPostPageProps = {
+type PageProps = {
   params: {
     id: string;
   };
@@ -234,7 +234,8 @@ const SkeletonLoader = () => (
 );
 
 // CORRECTED FUNCTION SIGNATURE
-export default function BlogPost({ params }: BlogPostPageProps) {
+export default function BlogPostPage({ params }: PageProps) {
+  const { id } = params;
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<SidebarBlogPost[]>([]);
   const [error, setError] = useState<string | null>(null);

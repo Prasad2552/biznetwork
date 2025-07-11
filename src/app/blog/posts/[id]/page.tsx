@@ -47,6 +47,11 @@ interface SidebarBlogPost {
   channelLogo?: string;
 }
 
+type BlogPostPageProps = {
+  params: {
+    id: string;
+  };
+
 const calculateReadingTime = (content: string): number => {
   const text = content.replace(/<[^>]*>/g, "");
   const wordCount = text.split(/\s+/).filter(Boolean).length;
@@ -227,7 +232,7 @@ const SkeletonLoader = () => (
 );
 
 // CORRECTED FUNCTION SIGNATURE
-export default function BlogPost({ params }: { params: { id: string } }) {
+export default function BlogPost({ params }: BlogPostPageProps) {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<SidebarBlogPost[]>([]);
   const [error, setError] = useState<string | null>(null);

@@ -18,6 +18,7 @@ import { Heart, Bookmark, Menu, UserPlus, Bell } from "lucide-react";
 import { type VideoPlayerRef } from "@/components/video-player";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useSession } from "next-auth/react";
+import { type Session } from "next-auth"; // ✅ Import Session type
 import { useVideos } from "@/hooks/useVideos";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
 import { usePDFDocuments } from "@/hooks/usePDFDocuments";
@@ -27,7 +28,7 @@ import { useTechNews } from "@/hooks/useTechNews";
 import { BlogPostCard } from "@/components/BlogPostCard";
 import { SearchInput } from "@/components/search-input";
 import { FeaturedVideoCard } from "@/components/FeaturedVideoCard";
-import { Video, type CaseStudy, Content, TechNews, BlogPost } from "@/types/common";
+import { Video, type CaseStudy, Content, TechNews, BlogPost, Comment } from "@/types/common";
 
 // Lazy loaded components
 const VideoList = React.lazy(() => import("@/components/VideoList"));
@@ -73,7 +74,20 @@ const setStoredSubscriberCount = (channelId: string, count: number) => {
 // --- REFACTORED & DECOMPOSED COMPONENTS ---
 
 // ## 1. Header Component
-const PageHeader = ({ isUserLoggedIn, isAdmin, session, handleLogout, toggleSidebar, activeNavItem, handleNavItemChange, handleDashboardRedirect }) => {
+// ✅ Define props interface
+interface PageHeaderProps {
+    isUserLoggedIn: boolean;
+    isAdmin: boolean;
+    session: Session | null;
+    handleLogout: () => void;
+    toggleSidebar: () => void;
+    activeNavItem: string;
+    handleNavItemChange: (item: string) => void;
+    handleDashboardRedirect: () => void;
+}
+
+const PageHeader: React.FC<PageHeaderProps> = ({ isUserLoggedIn, isAdmin, session, handleLogout, toggleSidebar, activeNavItem, handleNavItemChange, handleDashboardRedirect }) => {
+    const router = useRouter();
     const navItems = ['All', 'Videos', 'Blogs', 'Webinars', 'Podcasts', 'Case-Studies', 'Info-graphics', 'White-papers', 'Testimonials', 'E-books', 'Demos', 'Events', 'Tech News'];
 
     return (
@@ -135,7 +149,25 @@ const PageHeader = ({ isUserLoggedIn, isAdmin, session, handleLogout, toggleSide
 };
 
 // ## 2. Video Player View (When a videoId is in the URL)
-const VideoPlayerView = ({
+// ✅ Define props interface
+interface VideoPlayerViewProps {
+    video: Video | null;
+    handleLike: (videoId: string) => void;
+    handleDislike: (videoId: string) => void;
+    handleCommentSubmit: (videoId: string, comment: string) => void;
+    isVideoLiked: (video: Video | null) => boolean;
+    isVideoDisliked: (video: Video | null) => boolean;
+    handleSelectedVideoView: () => void;
+    handleSelectedVideoSubscriberCountChange: (count: number) => void;
+    subscriberCount: number;
+    comments: Comment[];
+    setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+    upNextVideos: Content[];
+    handleUpNextVideoClick: (item: Content) => void;
+    updateVideoState: (videoId: string, data: Partial<Video>) => void;
+}
+
+const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     video, handleLike, handleDislike, handleCommentSubmit, isVideoLiked, isVideoDisliked,
     handleSelectedVideoView, handleSelectedVideoSubscriberCountChange, subscriberCount,
     comments, setComments, upNextVideos, handleUpNextVideoClick, updateVideoState
@@ -162,9 +194,9 @@ const VideoPlayerView = ({
                     setIsCommentInputVisible={setIsCommentInputVisible}
                     newComment={newComment}
                     setNewComment={setNewComment}
-                    handleCommentSubmit={handleCommentSubmit}
-                    isVideoLiked={isVideoLiked}
-                    isVideoDisliked={isVideoDisliked}
+                    handleCommentSubmit={() => handleCommentSubmit(video._id, newComment)}
+                    isVideoLiked={() => isVideoLiked(video)}
+                    isVideoDisliked={() => isVideoDisliked(video)}
                     subscriberCount={subscriberCount}
                     comments={comments}
                     setComments={setComments}
@@ -213,7 +245,12 @@ const VideoPlayerView = ({
 };
 
 // ## 3. Blog Grid View
-const BlogGrid = ({ blogPosts, handleSelectedVideoSubscriberCountChange }) => {
+interface BlogGridProps {
+    blogPosts: BlogPost[];
+    handleSelectedVideoSubscriberCountChange: (count: number) => void;
+}
+
+const BlogGrid: React.FC<BlogGridProps> = ({ blogPosts, handleSelectedVideoSubscriberCountChange }) => {
     const horizontalPosts = useMemo(() => blogPosts?.filter(post => post.orientation !== 'vertical') || [], [blogPosts]);
     const verticalPosts = useMemo(() => blogPosts?.filter(post => post.orientation === 'vertical') || [], [blogPosts]);
 
@@ -250,7 +287,12 @@ const BlogGrid = ({ blogPosts, handleSelectedVideoSubscriberCountChange }) => {
 };
 
 // ## 4. Tech News Grid View
-const TechNewsGrid = ({ techNews, isLoading, error }) => {
+interface TechNewsGridProps {
+    techNews: TechNews[];
+    isLoading: boolean;
+    error: string | null;
+}
+const TechNewsGrid: React.FC<TechNewsGridProps> = ({ techNews, isLoading, error }) => {
     if (isLoading) return <div>Loading Tech News...</div>;
     if (error) return <div>Error loading Tech News: {error}</div>;
 
@@ -274,7 +316,31 @@ const TechNewsGrid = ({ techNews, isLoading, error }) => {
 };
 
 // ## 5. Default "All" Content Layout
-const AllContentLayout = ({
+interface AllContentLayoutProps {
+    featuredVideo: Video | null;
+    handleLike: (videoId: string) => void;
+    handleDislike: (videoId: string) => void;
+    handleFeaturedVideoView: () => void;
+    handleFeaturedVideoSubscriberCountChange: (count: number) => void;
+    handleCommentSubmit: (videoId: string, comment: string) => void;
+    isVideoLiked: (video: Video | null) => boolean;
+    isVideoDisliked: (video: Video | null) => boolean;
+    subscriberCount: number;
+    comments: Comment[];
+    setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+    upNextVideos: Content[];
+    handleUpNextVideoClick: (item: Content) => void;
+    popularBlogs: BlogPost[];
+    popularWebinarVideos: Content[];
+    popularEventVideos: Content[];
+    handleWebinarClick: (item: Content) => void;
+    handleEventClick: (item: Content) => void;
+    techNews: TechNews[];
+    handleNavItemChange: (item: string) => void;
+    updateVideoState: (videoId: string, data: Partial<Video>) => void;
+}
+
+const AllContentLayout: React.FC<AllContentLayoutProps> = ({
     featuredVideo, handleLike, handleDislike, handleFeaturedVideoView, handleFeaturedVideoSubscriberCountChange,
     handleCommentSubmit, isVideoLiked, isVideoDisliked, subscriberCount, comments, setComments,
     upNextVideos, handleUpNextVideoClick, popularBlogs, popularWebinarVideos, popularEventVideos,
@@ -298,9 +364,9 @@ const AllContentLayout = ({
                             setIsCommentInputVisible={setIsCommentInputVisible}
                             newComment={newComment}
                             setNewComment={setNewComment}
-                            handleCommentSubmit={handleCommentSubmit}
-                            isVideoLiked={isVideoLiked}
-                            isVideoDisliked={isVideoDisliked}
+                            handleCommentSubmit={() => handleCommentSubmit(featuredVideo._id, newComment)}
+                            isVideoLiked={() => isVideoLiked(featuredVideo)}
+                            isVideoDisliked={() => isVideoDisliked(featuredVideo)}
                             subscriberCount={subscriberCount}
                             comments={comments}
                             setComments={setComments}
@@ -326,7 +392,7 @@ const AllContentLayout = ({
                             <Link href={`/blog/posts/${post.slug}`} key={post._id}>
                                 <Card className="flex items-center p-4 h-[120px] w-full">
                                     <div className="w-24 h-24 relative flex-shrink-0 rounded overflow-hidden mr-4">
-                                        <Image src={post.featuredImage || "/placeholder.svg"} alt={post.title} fill className="object-cover rounded" loading="lazy" />
+                                        <Image src={post.featuredImage || "/placeholder.svg"} alt={post.title} fill className="object-cover rounded" loading="lazy" sizes="96px"/>
                                     </div>
                                     <div className="flex flex-col justify-between flex-1 h-full overflow-hidden">
                                         <h3 className="font-semibold text-sm line-clamp-2">{post.title}</h3>
@@ -350,7 +416,7 @@ const AllContentLayout = ({
                          {popularWebinarVideos.map((video) => (
                              <Card key={video._id} className="flex items-center p-4 h-[120px] w-full cursor-pointer hover:shadow-md transition-shadow border-none bg-gray-50" onClick={() => handleWebinarClick(video)}>
                                  <div className="w-24 h-24 relative flex-shrink-0 rounded overflow-hidden mr-4">
-                                     <Image src={video.thumbnailUrl || "/placeholder.svg"} alt={video.title} fill className="object-cover rounded" loading="lazy" />
+                                     <Image src={video.thumbnailUrl || "/placeholder.svg"} alt={video.title} fill className="object-cover rounded" loading="lazy" sizes="96px"/>
                                  </div>
                                  <div className="flex flex-col justify-between flex-1 h-full overflow-hidden">
                                      <h3 className="font-semibold text-sm line-clamp-2">{video.title}</h3>
@@ -373,7 +439,7 @@ const AllContentLayout = ({
                          {popularEventVideos.map((video) => (
                              <Card key={video._id} className="flex items-center p-4 h-[120px] w-full cursor-pointer hover:shadow-md transition-shadow border-none bg-gray-50" onClick={() => handleEventClick(video)}>
                                  <div className="w-24 h-24 relative flex-shrink-0 rounded overflow-hidden mr-4">
-                                     <Image src={video.thumbnailUrl || "/placeholder.svg"} alt={video.title} fill className="object-cover rounded" loading="lazy" />
+                                     <Image src={video.thumbnailUrl || "/placeholder.svg"} alt={video.title} fill className="object-cover rounded" loading="lazy" sizes="96px"/>
                                  </div>
                                  <div className="flex flex-col justify-between flex-1 h-full overflow-hidden">
                                      <h3 className="font-semibold text-sm line-clamp-2">{video.title}</h3>
@@ -449,25 +515,23 @@ function Home({ params }: VideoPageProps) {
 
     // --- CORE LOGIC HANDLERS ---
     const handleViewCountUpdate = useCallback(async (id: string, contentType: string = 'video') => {
-        const apiMap = { video: 'videos', webinar: 'webinars', podcast: 'podcasts', demo: 'demos', event: 'events' };
+        const apiMap: Record<string, string> = { video: 'videos', webinar: 'webinars', podcast: 'podcasts', demo: 'demos', event: 'events' };
         const endpoint = apiMap[contentType.toLowerCase()] || 'videos';
         try {
             const response = await fetch(`/api/${endpoint}/${id}/view`, { method: 'POST' });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
 
-            const stateUpdaterMap = { videos: setVideos, webinars: (d) => {}, /* add other setters if needed */ };
-            const updater = stateUpdaterMap[endpoint];
-            if (updater) {
-                updater(prev => prev.map(item => item._id === id ? { ...item, views: data.views } : item));
-            }
-            if (selectedVideo?._id === id) setSelectedVideo(prev => ({ ...prev!, views: data.views }));
-            if (featuredVideo?._id === id) setFeaturedVideo(prev => ({ ...prev!, views: data.views }));
+            // This is a simplified updater. For a more robust solution, you'd have setters for each content type.
+            setVideos(prev => prev.map(item => item._id === id ? { ...item, views: data.views } : item));
+
+            if (selectedVideo?._id === id) setSelectedVideo(prev => prev ? ({ ...prev, views: data.views }) : null);
+            if (featuredVideo?._id === id) setFeaturedVideo(prev => prev ? ({ ...prev, views: data.views }) : null);
         } catch (error) {
             console.error('Error updating view count:', error);
             toast.error('Error updating view count.');
         }
-    }, [videos, selectedVideo, featuredVideo, setFeaturedVideo, setVideos]);
+    }, [selectedVideo, featuredVideo, setFeaturedVideo, setVideos]);
 
     const handleHistoryUpdate = useCallback(async (id: string) => {
         if (!token) return;
@@ -499,7 +563,6 @@ function Home({ params }: VideoPageProps) {
 
         router.push(`/${navItem}/${videoId}/${slug}`, { scroll: false });
         
-        // The useEffect for `params` will handle fetching the video data
     }, [router]);
 
     const handleLike = useCallback(async (videoId: string) => {
@@ -507,7 +570,7 @@ function Home({ params }: VideoPageProps) {
         try {
             const response = await fetch(`/api/videos/${videoId}/like`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
             if (!response.ok) throw new Error('Failed to like video');
             const data = await response.json();
@@ -522,7 +585,7 @@ function Home({ params }: VideoPageProps) {
         try {
             const response = await fetch(`/api/videos/${videoId}/dislike`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
             if (!response.ok) throw new Error('Failed to dislike video');
             const data = await response.json();
@@ -534,6 +597,7 @@ function Home({ params }: VideoPageProps) {
 
     const handleCommentSubmit = useCallback(async (videoId: string, newComment: string) => {
         if (!isUserLoggedIn) return toast.info('Please sign in to add a comment.');
+        if(!newComment.trim()) return;
         try {
             const response = await fetch(`/api/videos/${videoId}/comments`, {
                 method: 'POST',
@@ -544,18 +608,17 @@ function Home({ params }: VideoPageProps) {
             const data = await response.json();
             setComments(prevComments => [data, ...prevComments]);
             
-            // Optimistically update comment count
-            const updateCount = (video) => video ? { ...video, commentCount: (video.commentCount || 0) + 1 } : null;
-            if (videos) setVideos(prev => prev.map(v => v._id === videoId ? updateCount(v) : v));
-            if (selectedVideo?._id === videoId) setSelectedVideo(updateCount);
-            if (featuredVideo?._id === videoId) setFeaturedVideo(updateCount);
+            const updateCount = (video: Video | null): Video | null => video ? { ...video, commentCount: (video.commentCount || 0) + 1 } : null;
+            setVideos(prev => prev.map(v => v._id === videoId ? updateCount(v) as Video : v));
+            setSelectedVideo(updateCount);
+            setFeaturedVideo(updateCount);
 
             toast.success("Comment submitted!");
         } catch (error) {
             console.error('Error submitting comment:', error);
             toast.error("An error occurred while submitting the comment.");
         }
-    }, [isUserLoggedIn, token, setComments, videos, setVideos, selectedVideo, featuredVideo, setFeaturedVideo]);
+    }, [isUserLoggedIn, token, setComments, setVideos, setSelectedVideo, setFeaturedVideo]);
 
     const handleDashboardRedirect = () => router.push(isAdmin ? '/admin/channels' : '/dashboard');
 
@@ -569,7 +632,6 @@ function Home({ params }: VideoPageProps) {
 
     // --- useEffect Hooks for orchestrating logic ---
     useEffect(() => {
-        // Effect to resolve params and set videoId state
         const resolveParams = async () => {
             const resolvedParams = await params;
             setVideoId(resolvedParams.videoId);
@@ -578,14 +640,13 @@ function Home({ params }: VideoPageProps) {
     }, [params]);
 
     useEffect(() => {
-        // Effect to fetch video when videoId is set/changed
         const fetchVideoById = async (id: string) => {
             const typeParam = searchParamsHook?.get('activeNavItem')?.toLowerCase().replace(/s$/, "") || 'video';
             try {
                 const url = `/api/videos/${id}?type=${typeParam}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Failed to fetch video");
-                const data = await response.json();
+                const data: Video = await response.json();
 
                 setSelectedVideo({
                     ...data,
@@ -595,9 +656,9 @@ function Home({ params }: VideoPageProps) {
                 });
                 setSelectedVideoSubscriberCount(getStoredSubscriberCount(data.channel) || data.subscriberCount || 0);
                 fetchComments(id);
-                setHasSelectedVideoBeenViewed(false); // Reset view tracking for the new video
+                setHasSelectedVideoBeenViewed(false); 
                 handleVideoView(id, false, data.type);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching video:", error);
                 toast.error(`Failed to load video: ${error.message}`);
             }
@@ -614,17 +675,17 @@ function Home({ params }: VideoPageProps) {
             setActiveNavItem('All');
             setSelectedVideo(null);
         }
-    }, [videoId, searchParamsHook, handleVideoView, fetchComments]);
+    }, [videoId, searchParamsHook]); // Simplified dependencies
     
     // --- MEMOIZED VALUES for performance ---
     const popularWebinarVideos = useMemo(() => webinars?.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 2) || [], [webinars]);
     const popularEventVideos = useMemo(() => events?.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 2) || [], [events]);
-    const isVideoLiked = (video) => video && session?.user?.id ? video.likedBy?.includes(session.user.id) : false;
-    const isVideoDisliked = (video) => video && session?.user?.id ? video.dislikedBy?.includes(session.user.id) : false;
+    const isVideoLiked = (video: Video | null) => video && session?.user?.id ? video.likedBy?.includes(session.user.id) : false;
+    const isVideoDisliked = (video: Video | null) => video && session?.user?.id ? video.dislikedBy?.includes(session.user.id) : false;
 
     // --- RENDER LOGIC ---
     const renderCategorizedContent = () => {
-        const videoContent = { 'Videos': videos, 'Webinars': webinars, 'Podcasts': podcasts, 'Testimonials': testimonials, 'Demos': demos, 'Events': events };
+        const videoContent: Record<string, Content[]> = { 'Videos': videos, 'Webinars': webinars, 'Podcasts': podcasts, 'Testimonials': testimonials, 'Demos': demos, 'Events': events };
         if (videoContent[activeNavItem]) {
             return (
                 <Suspense fallback={<div>Loading...</div>}>
@@ -632,7 +693,7 @@ function Home({ params }: VideoPageProps) {
                 </Suspense>
             );
         }
-        const pdfContent = { 'Case-Studies': 'casestudies', 'Info-graphics': 'infographics', 'White-papers': 'whitepapers', 'E-books': 'ebooks' };
+        const pdfContent: Record<string, string> = { 'Case-Studies': 'casestudies', 'Info-graphics': 'infographics', 'White-papers': 'whitepapers', 'E-books': 'ebooks' };
         if (pdfContent[activeNavItem]) {
             return (
                 <Suspense fallback={<div>Loading Documents...</div>}>
@@ -650,11 +711,11 @@ function Home({ params }: VideoPageProps) {
                     featuredVideo={featuredVideo}
                     handleLike={handleLike}
                     handleDislike={handleDislike}
-                    handleFeaturedVideoView={() => featuredVideo && handleVideoView(featuredVideo._id, true)}
+                    handleFeaturedVideoView={() => featuredVideo && handleVideoView(featuredVideo._id, true, featuredVideo.type)}
                     handleFeaturedVideoSubscriberCountChange={setFeaturedVideoSubscriberCount}
-                    handleCommentSubmit={(id, comment) => handleCommentSubmit(id, comment)}
-                    isVideoLiked={() => isVideoLiked(featuredVideo)}
-                    isVideoDisliked={() => isVideoDisliked(featuredVideo)}
+                    handleCommentSubmit={handleCommentSubmit}
+                    isVideoLiked={isVideoLiked}
+                    isVideoDisliked={isVideoDisliked}
                     subscriberCount={featuredVideo?.subscriberCount || featuredVideoSubscriberCount}
                     comments={comments}
                     setComments={setComments}
@@ -699,9 +760,9 @@ function Home({ params }: VideoPageProps) {
                             video={selectedVideo}
                             handleLike={handleLike}
                             handleDislike={handleDislike}
-                            handleCommentSubmit={(id, comment) => handleCommentSubmit(id, comment)}
-                            isVideoLiked={() => isVideoLiked(selectedVideo)}
-                            isVideoDisliked={() => isVideoDisliked(selectedVideo)}
+                            handleCommentSubmit={handleCommentSubmit}
+                            isVideoLiked={isVideoLiked}
+                            isVideoDisliked={isVideoDisliked}
                             handleSelectedVideoView={() => selectedVideo && handleVideoView(selectedVideo._id, false, selectedVideo.type)}
                             handleSelectedVideoSubscriberCountChange={(count) => {
                                 if (selectedVideo?.channel) {

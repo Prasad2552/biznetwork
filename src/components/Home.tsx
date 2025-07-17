@@ -150,12 +150,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({ isUserLoggedIn, isAdmin, sessio
 // ## 2. Video Player View (When a videoId is in the URL)
 interface VideoPlayerViewProps {
     video: Video | null;
-    handleLike: (videoId: string) => Promise<void>; // ✅ Corrected type
-    handleDislike: (videoId: string) => Promise<void>; // ✅ Corrected type
-    handleCommentSubmit: (videoId: string, comment: string) => Promise<void>; // ✅ Corrected type
+    handleLike: (videoId: string) => Promise<void>;
+    handleDislike: (videoId: string) => Promise<void>;
+    handleCommentSubmit: (videoId: string, comment: string) => Promise<void>;
     isVideoLiked: (video: Video | null) => boolean;
     isVideoDisliked: (video: Video | null) => boolean;
-    handleSelectedVideoView: () => void;
+    handleSelectedVideoView: () => Promise<void>; // ✅ Corrected type
     handleSelectedVideoSubscriberCountChange: (count: number) => void;
     subscriberCount: number;
     comments: Comment[];
@@ -316,11 +316,11 @@ const TechNewsGrid: React.FC<TechNewsGridProps> = ({ techNews, isLoading, error 
 // ## 5. Default "All" Content Layout
 interface AllContentLayoutProps {
     featuredVideo: Video | null;
-    handleLike: (videoId: string) => Promise<void>; // ✅ Corrected type
-    handleDislike: (videoId: string) => Promise<void>; // ✅ Corrected type
-    handleFeaturedVideoView: () => void;
+    handleLike: (videoId: string) => Promise<void>;
+    handleDislike: (videoId: string) => Promise<void>;
+    handleFeaturedVideoView: () => Promise<void>; // ✅ Corrected type
     handleFeaturedVideoSubscriberCountChange: (count: number) => void;
-    handleCommentSubmit: (videoId: string, comment: string) => Promise<void>; // ✅ Corrected type
+    handleCommentSubmit: (videoId: string, comment: string) => Promise<void>;
     isVideoLiked: (video: Video | null) => boolean;
     isVideoDisliked: (video: Video | null) => boolean;
     subscriberCount: number;
@@ -543,7 +543,7 @@ function Home({ params }: VideoPageProps) {
         }
     }, [token]);
 
-    const handleVideoView = useCallback(async (id: string, isFeatured = false, contentType: string = 'video') => {
+    const handleVideoView = useCallback(async (id: string, isFeatured = false, contentType: string = 'video'): Promise<void> => {
         const hasViewed = isFeatured ? hasFeaturedVideoBeenViewed : hasSelectedVideoBeenViewed;
         if (hasViewed) return;
 
@@ -664,7 +664,7 @@ function Home({ params }: VideoPageProps) {
                 setSelectedVideoSubscriberCount(getStoredSubscriberCount(data.channel) || data.subscriberCount || 0);
                 fetchComments(id);
                 setHasSelectedVideoBeenViewed(false); 
-                handleVideoView(id, false, data.type);
+                await handleVideoView(id, false, data.type);
             } catch (error: any) {
                 console.error("Error fetching video:", error);
                 toast.error(`Failed to load video: ${error.message}`);
@@ -682,7 +682,7 @@ function Home({ params }: VideoPageProps) {
             setActiveNavItem('All');
             setSelectedVideo(null);
         }
-    }, [videoId, searchParamsHook, handleVideoView, fetchComments]); 
+    }, [videoId, searchParamsHook]); // Simplified dependencies, removed handlers that depend on state updated within this effect
     
     // --- MEMOIZED VALUES for performance ---
     const popularWebinarVideos = useMemo(() => webinars?.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 2) || [], [webinars]);
@@ -718,7 +718,7 @@ function Home({ params }: VideoPageProps) {
                     featuredVideo={featuredVideo}
                     handleLike={handleLike}
                     handleDislike={handleDislike}
-                    handleFeaturedVideoView={() => featuredVideo && handleVideoView(featuredVideo._id, true, featuredVideo.type)}
+                    handleFeaturedVideoView={() => featuredVideo ? handleVideoView(featuredVideo._id, true, featuredVideo.type) : Promise.resolve()}
                     handleFeaturedVideoSubscriberCountChange={setFeaturedVideoSubscriberCount}
                     handleCommentSubmit={handleCommentSubmit}
                     isVideoLiked={isVideoLiked}
@@ -762,7 +762,7 @@ function Home({ params }: VideoPageProps) {
                     handleDashboardRedirect={handleDashboardRedirect}
                 />
                 <main className="flex-1 overflow-y-auto p-4">
-                    {videoId ? (
+                    {videoId && selectedVideo ? (
                         <VideoPlayerView
                             video={selectedVideo}
                             handleLike={handleLike}
@@ -770,7 +770,7 @@ function Home({ params }: VideoPageProps) {
                             handleCommentSubmit={handleCommentSubmit}
                             isVideoLiked={isVideoLiked}
                             isVideoDisliked={isVideoDisliked}
-                            handleSelectedVideoView={() => selectedVideo && handleVideoView(selectedVideo._id, false, selectedVideo.type)}
+                            handleSelectedVideoView={() => handleVideoView(selectedVideo._id, false, selectedVideo.type)}
                             handleSelectedVideoSubscriberCountChange={(count) => {
                                 if (selectedVideo?.channel) {
                                     setSelectedVideoSubscriberCount(count);

@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import { Heart, Bookmark, Menu, UserPlus, Bell } from "lucide-react";
 import { type VideoPlayerRef } from "@/components/video-player";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useSession } from "next-auth/react";
-import { type Session } from "next-auth"; // ✅ Import Session type
+import { type Session } from "next-auth";
 import { useVideos } from "@/hooks/useVideos";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
 import { usePDFDocuments } from "@/hooks/usePDFDocuments";
@@ -74,7 +74,6 @@ const setStoredSubscriberCount = (channelId: string, count: number) => {
 // --- REFACTORED & DECOMPOSED COMPONENTS ---
 
 // ## 1. Header Component
-// ✅ Define props interface
 interface PageHeaderProps {
     isUserLoggedIn: boolean;
     isAdmin: boolean;
@@ -149,12 +148,11 @@ const PageHeader: React.FC<PageHeaderProps> = ({ isUserLoggedIn, isAdmin, sessio
 };
 
 // ## 2. Video Player View (When a videoId is in the URL)
-// ✅ Define props interface
 interface VideoPlayerViewProps {
     video: Video | null;
-    handleLike: (videoId: string) => void;
-    handleDislike: (videoId: string) => void;
-    handleCommentSubmit: (videoId: string, comment: string) => void;
+    handleLike: (videoId: string) => Promise<void>; // ✅ Corrected type
+    handleDislike: (videoId: string) => Promise<void>; // ✅ Corrected type
+    handleCommentSubmit: (videoId: string, comment: string) => Promise<void>; // ✅ Corrected type
     isVideoLiked: (video: Video | null) => boolean;
     isVideoDisliked: (video: Video | null) => boolean;
     handleSelectedVideoView: () => void;
@@ -318,11 +316,11 @@ const TechNewsGrid: React.FC<TechNewsGridProps> = ({ techNews, isLoading, error 
 // ## 5. Default "All" Content Layout
 interface AllContentLayoutProps {
     featuredVideo: Video | null;
-    handleLike: (videoId: string) => void;
-    handleDislike: (videoId: string) => void;
+    handleLike: (videoId: string) => Promise<void>; // ✅ Corrected type
+    handleDislike: (videoId: string) => Promise<void>; // ✅ Corrected type
     handleFeaturedVideoView: () => void;
     handleFeaturedVideoSubscriberCountChange: (count: number) => void;
-    handleCommentSubmit: (videoId: string, comment: string) => void;
+    handleCommentSubmit: (videoId: string, comment: string) => Promise<void>; // ✅ Corrected type
     isVideoLiked: (video: Video | null) => boolean;
     isVideoDisliked: (video: Video | null) => boolean;
     subscriberCount: number;
@@ -565,8 +563,11 @@ function Home({ params }: VideoPageProps) {
         
     }, [router]);
 
-    const handleLike = useCallback(async (videoId: string) => {
-        if (!session?.user?.id) return toast.error("Please sign in to like videos");
+    const handleLike = useCallback(async (videoId: string): Promise<void> => {
+        if (!session?.user?.id) {
+            toast.error("Please sign in to like videos");
+            return;
+        }
         try {
             const response = await fetch(`/api/videos/${videoId}/like`, {
                 method: 'POST',
@@ -580,8 +581,11 @@ function Home({ params }: VideoPageProps) {
         }
     }, [session, token, updateVideoState]);
 
-    const handleDislike = useCallback(async (videoId: string) => {
-        if (!session?.user?.id) return toast.error("Please sign in to dislike videos");
+    const handleDislike = useCallback(async (videoId: string): Promise<void> => {
+        if (!session?.user?.id) {
+            toast.error("Please sign in to dislike videos");
+            return;
+        }
         try {
             const response = await fetch(`/api/videos/${videoId}/dislike`, {
                 method: 'POST',
@@ -595,8 +599,11 @@ function Home({ params }: VideoPageProps) {
         }
     }, [session, token, updateVideoState]);
 
-    const handleCommentSubmit = useCallback(async (videoId: string, newComment: string) => {
-        if (!isUserLoggedIn) return toast.info('Please sign in to add a comment.');
+    const handleCommentSubmit = useCallback(async (videoId: string, newComment: string): Promise<void> => {
+        if (!isUserLoggedIn) {
+            toast.info('Please sign in to add a comment.');
+            return;
+        }
         if(!newComment.trim()) return;
         try {
             const response = await fetch(`/api/videos/${videoId}/comments`, {
@@ -675,13 +682,13 @@ function Home({ params }: VideoPageProps) {
             setActiveNavItem('All');
             setSelectedVideo(null);
         }
-    }, [videoId, searchParamsHook]); // Simplified dependencies
+    }, [videoId, searchParamsHook, handleVideoView, fetchComments]); 
     
     // --- MEMOIZED VALUES for performance ---
     const popularWebinarVideos = useMemo(() => webinars?.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 2) || [], [webinars]);
     const popularEventVideos = useMemo(() => events?.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 2) || [], [events]);
-    const isVideoLiked = (video: Video | null) => video && session?.user?.id ? video.likedBy?.includes(session.user.id) : false;
-    const isVideoDisliked = (video: Video | null) => video && session?.user?.id ? video.dislikedBy?.includes(session.user.id) : false;
+    const isVideoLiked = (video: Video | null): boolean => !!video && !!session?.user?.id && (video.likedBy?.includes(session.user.id) || false);
+    const isVideoDisliked = (video: Video | null): boolean => !!video && !!session?.user?.id && (video.dislikedBy?.includes(session.user.id) || false);
 
     // --- RENDER LOGIC ---
     const renderCategorizedContent = () => {

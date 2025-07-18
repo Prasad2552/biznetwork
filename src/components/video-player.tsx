@@ -23,12 +23,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   width = "100%",
   height = "100%",
   aspectRatio = "16:9",
+  className, 
 }) => {
-  const aspect = aspectRatio.split(":").map(Number);
+ const aspect = aspectRatio.split(":").map(Number);
   const paddingTop = aspect.length === 2 ? (aspect[1] / aspect[0]) * 100 : 56.25;
 
-  return (
+ return (
     <div
+      className={className} // <--- assign it here!
       style={{
         position: "relative",
         width,

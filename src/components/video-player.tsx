@@ -30,6 +30,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   height = "100%",
   aspectRatio = "16:9",
   className, 
+  muted = false,
+  loop = false,   
 }) => {
  const aspect = aspectRatio.split(":").map(Number);
   const paddingTop = aspect.length === 2 ? (aspect[1] / aspect[0]) * 100 : 56.25;
@@ -51,6 +53,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         controls={controls}
         width="100%"
         height="100%"
+        muted={muted}
+        loop={loop} 
         style={{ position: "absolute", top: 0, left: 0 }}
         light={poster}
         config={{

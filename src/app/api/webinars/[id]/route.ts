@@ -1,3 +1,4 @@
+//src/app/api/webinars/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { isValidObjectId, Types } from "mongoose";
 import Video from "@/lib/models/Video";

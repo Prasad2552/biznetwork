@@ -87,8 +87,6 @@ function Home({ params }: VideoPageProps) {
   const [selectedVideoSubscriberCount, setSelectedVideoSubscriberCount] = useState(0);
   const [featuredVideoSubscriberCount, setFeaturedVideoSubscriberCount] = useState(0);
   const playerRef = useRef<ReactPlayer>(null);
-
-  const videoPlayerRef = useRef<VideoPlayerRef>(null);
   const imageGalleryRef = useRef<HTMLDivElement>(null);
 
   // --- Auth/Session ---

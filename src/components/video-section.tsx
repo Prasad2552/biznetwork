@@ -1,7 +1,7 @@
 //src\components\video-section.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Play, ThumbsUp, ThumbsDown, Share, MoreHorizontal } from 'lucide-react'
 import { Button } from "@/components/ui/button"

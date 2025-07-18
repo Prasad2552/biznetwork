@@ -23,7 +23,7 @@ import {
     UserPlus,
     Bell,
 } from "lucide-react";
-import type VideoPlayerRef from "@/components/video-player";
+import ReactPlayer from "react-player";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -86,6 +86,7 @@ function Home({ params }: VideoPageProps) {
   const [hasSelectedVideoBeenViewed, setHasSelectedVideoBeenViewed] = useState(false);
   const [selectedVideoSubscriberCount, setSelectedVideoSubscriberCount] = useState(0);
   const [featuredVideoSubscriberCount, setFeaturedVideoSubscriberCount] = useState(0);
+  const playerRef = useRef<ReactPlayer>(null);
 
   const videoPlayerRef = useRef<VideoPlayerRef>(null);
   const imageGalleryRef = useRef<HTMLDivElement>(null);

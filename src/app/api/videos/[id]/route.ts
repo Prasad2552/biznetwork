@@ -1,3 +1,4 @@
+//src/app/api/videos/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 

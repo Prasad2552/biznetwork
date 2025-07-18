@@ -1,3 +1,4 @@
+//src/components/video-player.tsx
 import React, {
     useState,
     useRef,

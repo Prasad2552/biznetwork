@@ -23,7 +23,7 @@ import {
     UserPlus,
     Bell,
 } from "lucide-react";
-import { type VideoPlayerRef } from "@/components/video-player";
+import type VideoPlayerRef from "@/components/video-player";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";

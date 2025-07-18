@@ -12,8 +12,14 @@ interface VideoPlayerProps {
   width?: string | number;
   height?: string | number;
   aspectRatio?: string; // e.g. "16:9" or "4:3"
-  className?: string; // <-- ADD THIS LINE
+  className?: string;
+  muted?: boolean;          // <-- Add this line
+  loop?: boolean;           // <-- And this, for loop support
+  onLike?: () => Promise<void>;
+  onDislike?: () => Promise<void>;
+  onVideoView?: () => Promise<void>;
 }
+
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   src,

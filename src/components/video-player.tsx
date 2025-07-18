@@ -1,4 +1,5 @@
-//src/components/video-player.tsx
+// src/components/video-player.tsx
+
 import React, {
     useState,
     useRef,
@@ -8,17 +9,8 @@ import React, {
     useCallback,
 } from "react";
 import {
-    Play,
-    Pause,
-    Volume2,
-    VolumeX,
-    Settings,
-    Maximize,
-    Minimize,
-    RotateCcw,
-    RotateCw,
-    PictureInPicture,
-
+    Play, Pause, Volume2, VolumeX, Settings,
+    Maximize, Minimize, RotateCcw, RotateCw, PictureInPicture
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +28,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// ------------------------------------------
+
 interface VideoPlayerProps {
     src: string;
     poster?: string;
@@ -48,7 +42,7 @@ interface VideoPlayerProps {
     loop?: boolean;
     width?: string;
     height?: string;
-    aspectRatio?: number; // Aspect ratio for container
+    aspectRatio?: number; // e.g. 16/9
 }
 
 export type VideoPlayerRef = {
@@ -56,6 +50,8 @@ export type VideoPlayerRef = {
     play: () => void;
     pause: () => void;
 };
+
+// ------------------------------------------
 
 export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     (
@@ -69,168 +65,129 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             loop = false,
             width,
             height,
-            aspectRatio = 16 / 9, // Default aspect ratio
+            aspectRatio = 16 / 9,
         },
         ref
     ) => {
+
+        // --- refs, state ---
         const videoRef = useRef<HTMLVideoElement>(null);
         const containerRef = useRef<HTMLDivElement>(null);
         const progressRef = useRef<HTMLDivElement>(null);
-        const settingsButtonRef = useRef<HTMLButtonElement>(null);
+        const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+        // Video State
         const [isPlaying, setIsPlaying] = useState(false);
         const [hasPlayed, setHasPlayed] = useState(false);
-         const [isVideoInView, setIsVideoInView] = useState(false);
+        const [isVideoInView, setIsVideoInView] = useState(false);
         const [progress, setProgress] = useState(0);
         const [currentTime, setCurrentTime] = useState(0);
         const [duration, setDuration] = useState(0);
-        const [volume, setVolume] = useState(1);
+        const [volume, setVolume] = useState<number>(1);
         const [isMuted, setIsMuted] = useState(muted);
         const [isFullscreen, setIsFullscreen] = useState(false);
         const [showControls, setShowControls] = useState(true);
         const [theaterMode, setTheaterMode] = useState(false);
         const [playbackSpeed, setPlaybackSpeed] = useState(1);
         const [quality, setQuality] = useState("auto");
-         const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
         const [isLoading, setIsLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
-        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
         const [isBuffering, setIsBuffering] = useState(false);
 
-        const togglePictureInPicture = useCallback(async () => {
-            try {
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                } else if (videoRef.current) {
-                    await videoRef.current.requestPictureInPicture();
-                }
-            } catch (error) {
-                console.error("Failed to toggle picture-in-picture mode:", error);
-            }
-        },[]);
-
-
-        // Video control methods
-        const togglePlay = useCallback(() => {
-            const video = videoRef.current;
-            if (!video) return;
-
-            if (isPlaying) {
-                video.pause();
-                setIsLoading(false);
-            } else {
-                setError(null);
-                video.play()
-                    .then(() => setIsLoading(false))
-                    .catch((error) => {
-                        console.error("Playback error:", error);
-                        setError("Error starting playback");
-                        setIsPlaying(false);
-                        setIsLoading(false);
-                         setIsBuffering(false);
+        // ------------------------------------------
+        // --- Intersection Observer to lazy-load video ---
+        useEffect(() => {
+            const observer = new window.IntersectionObserver(
+                (entries, obs) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            setIsVideoInView(true);
+                            obs.unobserve(entry.target);
+                        }
                     });
+                },
+                { threshold: 0.2 }
+            );
+            if (containerRef.current) {
+                observer.observe(containerRef.current);
             }
-        }, [isPlaying]);
-
-        const play = useCallback(() => {
-            videoRef.current?.play();
+            return () => {
+                if (containerRef.current) {
+                    observer.unobserve(containerRef.current);
+                }
+            }
         }, []);
 
-        const pause = useCallback(() => {
-            videoRef.current?.pause();
-        }, []);
-
-        useImperativeHandle(ref, () => ({
-            toggle: togglePlay,
-            play,
-            pause,
-        }));
-
-         useEffect(() => {
-           const observer = new IntersectionObserver(
-              (entries) => {
-                 entries.forEach((entry) => {
-                   if (entry.isIntersecting) {
-                      setIsVideoInView(true); // Set this to load the video
-                      observer.unobserve(entry.target);
-                  }
-                });
-              },
-               { threshold: 0.2 }
-           );
-          if (containerRef.current) {
-             observer.observe(containerRef.current);
-         }
-
-          return () => {
-           if(containerRef.current){
-              observer.unobserve(containerRef.current)
-            }
-          };
-         }, []);
-
-        // Event handlers
+        // --- Video Event Handlers ---
         useEffect(() => {
             const video = videoRef.current;
             if (!video || !isVideoInView) return;
 
-            const handleTimeUpdate = () => {
-                setProgress((video.currentTime / video.duration) * 100);
+            const onTimeUpdate = () => {
+                if (video.duration > 0) {
+                    setProgress((video.currentTime / video.duration) * 100);
+                }
                 setCurrentTime(video.currentTime);
             };
-
-            const handleLoadedMetadata = () => {
-                setDuration(video.duration);
+            const onLoadedMetadata = () => {
+                setDuration(video.duration || 0);
                 setIsLoading(false);
             };
-
-            const handlePlay = () => {
+            const onPlay = () => {
                 setIsPlaying(true);
                 setHasPlayed(true);
                 setIsLoading(false);
                 setIsBuffering(false);
             };
+            const onPause = () => setIsPlaying(false);
+            const onError = () => setError("Error loading video");
+            const onWaiting = () => setIsBuffering(true);
+            const onPlaying = () => setIsBuffering(false);
 
-            const handlePause = () => setIsPlaying(false);
-             const handleError = () => setError("Error loading video");
-            const handleWaiting = () => setIsBuffering(true);
-             const handlePlaying = () => setIsBuffering(false);
+            video.addEventListener("timeupdate", onTimeUpdate);
+            video.addEventListener("loadedmetadata", onLoadedMetadata);
+            video.addEventListener("play", onPlay);
+            video.addEventListener("pause", onPause);
+            video.addEventListener("error", onError);
+            video.addEventListener("waiting", onWaiting);
+            video.addEventListener("playing", onPlaying);
 
-             video.addEventListener("timeupdate", handleTimeUpdate);
-            video.addEventListener("loadedmetadata", handleLoadedMetadata);
-            video.addEventListener("play", handlePlay);
-            video.addEventListener("pause", handlePause);
-             video.addEventListener("error", handleError);
-            video.addEventListener("waiting", handleWaiting);
-              video.addEventListener("playing", handlePlaying);
-
-              if (autoPlay) {
-                  video.muted = true;
-                 video.play().catch(console.error);
-              }
+            // Start video muted if autoPlay
+            if (autoPlay && hasPlayed === false) {
+                video.muted = true;
+                video.play().catch(() => {});
+            }
 
             return () => {
-                video.removeEventListener("timeupdate", handleTimeUpdate);
-                 video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-                video.removeEventListener("play", handlePlay);
-                video.removeEventListener("pause", handlePause);
-                video.removeEventListener("error", handleError);
-                video.removeEventListener("waiting", handleWaiting);
-                 video.removeEventListener("playing", handlePlaying);
-                clearTimeout(controlsTimeoutRef.current);
+                video.removeEventListener("timeupdate", onTimeUpdate);
+                video.removeEventListener("loadedmetadata", onLoadedMetadata);
+                video.removeEventListener("play", onPlay);
+                video.removeEventListener("pause", onPause);
+                video.removeEventListener("error", onError);
+                video.removeEventListener("waiting", onWaiting);
+                video.removeEventListener("playing", onPlaying);
+                if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
             };
         }, [autoPlay, src, hasPlayed, isVideoInView]);
 
-        // Fullscreen handling
+        // --- View tracking on first play ---
         useEffect(() => {
-            const handleFullscreenChange = () => {
+            if (onVideoView && hasPlayed) {
+                onVideoView().catch(() => {});
+            }
+        }, [onVideoView, hasPlayed, src]);
+
+        // --- Fullscreen event handling ---
+        useEffect(() => {
+            const listener = () => {
                 setIsFullscreen(!!document.fullscreenElement);
             };
-
-            document.addEventListener("fullscreenchange", handleFullscreenChange);
-            return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+            document.addEventListener("fullscreenchange", listener);
+            return () => document.removeEventListener("fullscreenchange", listener);
         }, []);
 
-        // Theater mode styling
+        // --- Hide page scrollbar in theater mode; block scroll ---
         useEffect(() => {
             if (theaterMode) {
                 document.body.classList.add("overflow-hidden");
@@ -239,144 +196,202 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                 document.body.classList.remove("overflow-hidden");
                 containerRef.current?.classList.remove("theater-mode");
             }
-
             return () => {
                 document.body.classList.remove("overflow-hidden");
                 containerRef.current?.classList.remove("theater-mode");
-            };
+            }
         }, [theaterMode]);
 
-     
-
-        // Controls visibility
-        const handleMouseMove = useCallback(() => {
+        // --- Controls visibility on mouse movement ---
+        const handleShowControls = useCallback(() => {
             setShowControls(true);
-            clearTimeout(controlsTimeoutRef.current);
-            if (!isSettingsOpen) {
-                controlsTimeoutRef.current = setTimeout(() => {
-                    isPlaying && setShowControls(false);
-                }, 2000);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+            if (isPlaying && !isSettingsOpen) {
+                controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 2300);
             }
-        }, [isPlaying, isSettingsOpen, setShowControls]);
+        }, [isPlaying, isSettingsOpen]);
 
-        // Video view tracking
+        // Don't hide controls if Settings open
         useEffect(() => {
-             if (onVideoView && hasPlayed && videoRef.current) {
-                 onVideoView().catch(console.error);
-              }
-          }, [onVideoView, hasPlayed, src]);
+            if (isSettingsOpen) setShowControls(true);
+        }, [isSettingsOpen]);
 
+        // ------------------------------------------
+        // --- Handler Functions ---
+        const togglePlay = useCallback(() => {
+            const video = videoRef.current;
+            if (!video) return;
+            if (isPlaying) {
+                video.pause();
+                setIsLoading(false);
+            } else {
+                setError(null);
+                video.play()
+                    .then(() => setIsLoading(false))
+                    .catch((err) => {
+                        setIsPlaying(false);
+                        setIsLoading(false);
+                        setIsBuffering(false);
+                        setError("Error starting playback");
+                    });
+            }
+        }, [isPlaying]);
 
+        const play = useCallback(() => { videoRef.current?.play(); }, []);
+        const pause = useCallback(() => { videoRef.current?.pause(); }, []);
+        useImperativeHandle(ref, () => ({
+            toggle: togglePlay,
+            play,
+            pause,
+        }));
 
-        // Helper functions
         const toggleMute = useCallback(() => {
-           if (videoRef.current) {
-              videoRef.current.muted = !isMuted;
-             setIsMuted(!isMuted);
-            setVolume(isMuted ? 1 : 0);
-             }
-         },[isMuted]);
-
-        const toggleFullscreen = useCallback(async () => {
-             try {
-              isFullscreen
-                ? await document.exitFullscreen()
-                : await containerRef.current?.requestFullscreen();
-            } catch (error) {
-                console.error("Fullscreen error:", error);
-            }
-        }, [isFullscreen]);
-
-         const toggleTheaterMode = useCallback(() => setTheaterMode(!theaterMode), [theaterMode]);
-
-        const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-            if (progressRef.current && videoRef.current) {
-                const rect = progressRef.current.getBoundingClientRect();
-                const pos = (e.clientX - rect.left) / rect.width;
-                videoRef.current.currentTime = pos * videoRef.current.duration;
-            }
-        },[]);
+            if (!videoRef.current) return;
+            const nextMuted = !isMuted;
+            videoRef.current.muted = nextMuted;
+            setIsMuted(nextMuted);
+            if (nextMuted) setVolume(0);
+            else setVolume(videoRef.current.volume || 1);
+        }, [isMuted]);
 
         const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
             const value = parseFloat(e.target.value);
             setVolume(value);
             if (videoRef.current) {
                 videoRef.current.volume = value;
+                videoRef.current.muted = value === 0;
                 setIsMuted(value === 0);
             }
-        },[]);
+        }, []);
 
-        const formatTime = useCallback((time: number) => {
-             const minutes = Math.floor(time / 60);
-           const seconds = Math.floor(time % 60);
+        const formatTime = useCallback((t: number) => {
+            if (isNaN(t)) return '00:00';
+            const minutes = Math.floor(t / 60);
+            const seconds = Math.floor(t % 60);
             return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-        },[]);
-           // Keyboard shortcuts
-           useEffect(() => {
-            const handleKeyDown = (e: KeyboardEvent) => {
-                if (!videoRef.current) return;
+        }, []);
 
-                switch (e.key.toLowerCase()) {
-                    case ' ':
+        const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+            if (!progressRef.current || !videoRef.current) return;
+            const { left, width } = progressRef.current.getBoundingClientRect();
+            const clickPosition = (e.clientX - left) / width;
+            if (videoRef.current.duration) {
+                videoRef.current.currentTime = clickPosition * videoRef.current.duration;
+            }
+        }, []);
+
+        const toggleFullscreen = useCallback(() => {
+            if (!containerRef.current) return;
+            try {
+                if (isFullscreen) {
+                    document.exitFullscreen();
+                } else {
+                    containerRef.current.requestFullscreen();
+                }
+            } catch (e) {
+                // Ignore
+            }
+        }, [isFullscreen]);
+
+        const toggleTheaterMode = useCallback(
+            () => setTheaterMode((tm) => !tm),
+            []
+        );
+
+        const togglePictureInPicture = useCallback(async () => {
+            try {
+                if ((document as any).pictureInPictureElement) {
+                    // @ts-ignore
+                    await document.exitPictureInPicture();
+                } else if (videoRef.current) {
+                    // @ts-ignore
+                    await videoRef.current.requestPictureInPicture();
+                }
+            } catch (error) {
+                /* handle error but don't crash */
+            }
+        }, []);
+
+        // --- Handle keyboard controls ---
+        useEffect(() => {
+            const handler = (e: KeyboardEvent) => {
+                if (!videoRef.current) return;
+                if (
+                    (document.activeElement &&
+                        ((document.activeElement as HTMLElement).tagName === "INPUT" ||
+                            (document.activeElement as HTMLElement).tagName === "TEXTAREA"))
+                ) {
+                    return;
+                }
+                switch (e.key) {
+                    case " ":
+                    case "k":
                         e.preventDefault();
                         togglePlay();
                         break;
-                    case 'm':
+                    case "m":
                         toggleMute();
                         break;
-                    case 'f':
+                    case "f":
                         toggleFullscreen();
                         break;
-                    case 't':
+                    case "t":
                         toggleTheaterMode();
                         break;
-                    case 'arrowleft':
+                    case "ArrowLeft":
+                        e.preventDefault();
                         videoRef.current.currentTime -= 5;
                         break;
-                    case 'arrowright':
+                    case "ArrowRight":
+                        e.preventDefault();
                         videoRef.current.currentTime += 5;
                         break;
                 }
             };
-
-            document.addEventListener('keydown', handleKeyDown);
-            return () => document.removeEventListener('keydown', handleKeyDown);
+            window.addEventListener("keydown", handler);
+            return () => window.removeEventListener("keydown", handler);
         }, [togglePlay, toggleMute, toggleFullscreen, toggleTheaterMode]);
 
+        // --- Fix settings menu inside fullscreen DOM context ---
+        // On fullscreen, render with a portal, otherwise normal
+        // Since the DropdownMenu library might use Portals, but DOM context may break in full screen,
+        // force modal={false} and position the menu in context.
+
+        // ------------------------------------------
         return (
             <TooltipProvider delayDuration={0}>
                 <div
                     ref={containerRef}
                     className={cn(
                         "group relative bg-black rounded-lg transition-all duration-300 ease-in-out overflow-hidden",
-                         !isFullscreen && `aspect-[${aspectRatio}]`,  // Added this line
-                        isFullscreen && "fixed inset-0 z-50 overflow-visible",
+                        isFullscreen ? "fixed inset-0 z-[9999] w-screen h-screen !aspect-auto" : "",
+                        !isFullscreen && `aspect-[${aspectRatio}]`,
                         className
                     )}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={() => !isSettingsOpen && setShowControls(false)}
+                    onMouseMove={handleShowControls}
+                    onMouseLeave={() => {
+                        if (!isSettingsOpen && isPlaying) setShowControls(false);
+                    }}
                 >
-                    {/* Aspect Ratio Container (Using padding hack) */}
-                    <div
-                         className={cn("relative w-full h-full", isFullscreen && "absolute inset-0")}
-                        style={{
-                           paddingBottom: `${(1 / aspectRatio) * 100}%`, // Calculate padding
-                        }}
 
+                    <div
+                        className={cn("relative w-full h-full", isFullscreen && "absolute inset-0")}
+                        style={{
+                            paddingBottom: !isFullscreen ? `${(1 / aspectRatio) * 100}%` : undefined,
+                            minHeight: isFullscreen ? "100vh" : undefined,
+                        }}
                     >
-                        {/* Loading and error states */}
+                        {/* Loader */}
                         {isLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-50">
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-40">
                                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
                             </div>
                         )}
-
                         {isBuffering && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-50">
-                                <div className="text-white">Buffering...</div>
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-40">
+                                <div className="text-white text-sm">Buffering...</div>
                             </div>
                         )}
-
                         {error && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-50 gap-4">
                                 <div className="text-white bg-red-500/80 px-4 py-2 rounded-lg">
@@ -391,54 +406,58 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                             </div>
                         )}
 
-                        {/* Video element */}
-                        {isVideoInView && (<video
-                            ref={videoRef}
-                            className="absolute top-0 left-0 w-full h-full object-contain"
-                            poster={poster}
-                            onClick={togglePlay}
-                            muted={muted}
-                            loop={loop}
-                            preload={autoPlay ? "auto" : "metadata"}
-                            width={width}
-                            height={height}
-                            style={{ maxWidth: '100%', maxHeight: '100%' }}
-                        >
-                            <source src={src} type="video/mp4" />
-                            Your browser does not support the video tag.
-                        </video>
+                        {/* Video */}
+                        {isVideoInView ? (
+                            <video
+                                ref={videoRef}
+                                className="absolute top-0 left-0 w-full h-full object-contain"
+                                poster={poster}
+                                onClick={togglePlay}
+                                muted={isMuted}
+                                loop={loop}
+                                preload={autoPlay ? "auto" : "metadata"}
+                                width={width}
+                                height={height}
+                                tabIndex={-1}
+                                style={{ maxWidth: '100%', maxHeight: '100%' }}
+                            >
+                                <source src={src} type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        ) : (
+                            <div className="absolute top-0 left-0 w-full h-full object-contain bg-black/80" />
                         )}
-                      {!isVideoInView && (<div className="absolute top-0 left-0 w-full h-full object-contain bg-black/80"></div>)}
                     </div>
 
-                    {/* Play/pause overlay */}
+                    {/* Play Button Overlay */}
                     <button
                         className={cn(
-                            "absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ",
-                            "w-16 h-16 rounded-full bg-black/50 flex items-center justify-center",
-                            "transition-opacity duration-200",
-                            (isPlaying || !showControls) && "opacity-0 group-hover:opacity-100"
+                            "absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20",
+                            "w-16 h-16 rounded-full bg-black/60 flex items-center justify-center",
+                            (isPlaying || !showControls) && "opacity-0 pointer-events-none",
+                            "transition-opacity duration-200"
                         )}
+                        tabIndex={-1}
                         onClick={togglePlay}
                         aria-label={isPlaying ? "Pause" : "Play"}
+                        style={{ outline: "none" }}
                     >
-                        {isPlaying ? (
-                            <Pause className="w-8 h-8 text-white" />
-                        ) : (
-                            <Play className="w-8 h-8 text-white ml-1" />
-                        )}
+                        {isPlaying
+                            ? <Pause className="w-8 h-8 text-white" />
+                            : <Play className="w-8 h-8 text-white ml-1" />
+                        }
                     </button>
 
-                    {/* Controls overlay */}
+                    {/* Controls */}
                     <div
                         className={cn(
                             "absolute bottom-0 left-0 right-0",
-                            "bg-gradient-to-t from-black/80 to-transparent",
+                            "bg-gradient-to-t from-black/85 to-transparent",
                             "px-4 pb-4 pt-8",
+                            "z-30",
                             "transition-opacity duration-200",
-                            !showControls && "opacity-0"
-                        )}
-                    >
+                            !showControls && "opacity-0 pointer-events-none"
+                        )}>
                         {/* Progress bar */}
                         <div
                             ref={progressRef}
@@ -452,11 +471,10 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                 />
                             </div>
                         </div>
-
-                        {/* Control buttons */}
+                        {/* Controls Row */}
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                                {/* Play controls */}
+                                {/* Play/Pause */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -466,48 +484,48 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                             onClick={togglePlay}
                                             aria-label={isPlaying ? "Pause" : "Play"}
                                         >
-                                            {isPlaying ? (
-                                                <Pause className="h-4 w-4" />
-                                            ) : (
-                                                <Play className="h-4 w-4 ml-0.5" />
-                                            )}
+                                            {isPlaying
+                                                ? <Pause className="h-4 w-4" />
+                                                : <Play className="h-4 w-4 ml-0.5" />
+                                            }
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                        {isPlaying ? "Pause (k)" : "Play (k)"}
-                                    </TooltipContent>
+                                    <TooltipContent>{isPlaying ? "Pause (k)" : "Play (k)"}</TooltipContent>
                                 </Tooltip>
 
-                                {/* Skip controls */}
+                                {/* Rewind/Forward */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 text-white hover:bg-white/20"
-                                            onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)}
+                                            onClick={() => {
+                                                if (videoRef.current) videoRef.current.currentTime -= 10;
+                                            }}
                                         >
                                             <RotateCcw className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">Rewind 10s</TooltipContent>
+                                    <TooltipContent>Rewind 10s</TooltipContent>
                                 </Tooltip>
-
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 text-white hover:bg-white/20"
-                                            onClick={() => videoRef.current && (videoRef.current.currentTime += 10)}
+                                            onClick={() => {
+                                                if (videoRef.current) videoRef.current.currentTime += 10;
+                                            }}
                                         >
                                             <RotateCw className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">Forward 10s</TooltipContent>
+                                    <TooltipContent>Forward 10s</TooltipContent>
                                 </Tooltip>
 
-                                {/* Volume controls */}
+                                {/* Volume */}
                                 <div className="flex items-center gap-2 group/volume">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -516,16 +534,15 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                                 size="icon"
                                                 className="h-8 w-8 text-white hover:bg-white/20"
                                                 onClick={toggleMute}
-                                                aria-label={isMuted ? "Unmute" : "Mute"}
+                                                aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
                                             >
-                                                {isMuted || volume === 0 ? (
-                                                    <VolumeX className="h-4 w-4" />
-                                                ) : (
-                                                    <Volume2 className="h-4 w-4" />
-                                                )}
+                                                {isMuted || volume === 0
+                                                    ? <VolumeX className="h-4 w-4" />
+                                                    : <Volume2 className="h-4 w-4" />
+                                                }
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="top">
+                                        <TooltipContent>
                                             {isMuted ? "Unmute (m)" : "Mute (m)"}
                                         </TooltipContent>
                                     </Tooltip>
@@ -534,7 +551,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                             type="range"
                                             min="0"
                                             max="1"
-                                            step="0.1"
+                                            step="0.01"
                                             value={volume}
                                             onChange={handleVolumeChange}
                                             className="w-20 accent-white"
@@ -544,26 +561,25 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                 </div>
 
                                 {/* Time display */}
-                                <div className="text-sm text-white space-x-1">
+                                <div className="text-sm text-white space-x-1 select-none">
                                     <span>{formatTime(currentTime)}</span>
                                     <span>/</span>
                                     <span>{formatTime(duration)}</span>
                                 </div>
                             </div>
 
-                            {/* Right-side controls */}
+                            {/* ---- Right controls ---- */}
                             <div className="flex items-center gap-2 ml-auto">
-                                {/* Settings dropdown */}
+                                {/* Settings */}
                                 <DropdownMenu
-                                    modal={false} // Add this prop to disable the portal
-                                    onOpenChange={(open) => {
+                                    modal={false}
+                                    onOpenChange={open => {
                                         setIsSettingsOpen(open);
-                                        open && setShowControls(true);
+                                        if (open) setShowControls(true);
                                     }}
                                 >
                                     <DropdownMenuTrigger asChild>
                                         <Button
-                                            ref={settingsButtonRef}
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 text-white hover:bg-white/20"
@@ -576,17 +592,17 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                         align="end"
                                         side="top"
                                         sideOffset={12}
-                                        className="w-56 bg-black/90 border-white/20 z-[1002]"
+                                        className="w-56 bg-black/95 border-white/20 z-[1002]"
                                     >
                                         <div className="py-2">
                                             <p className="font-medium text-sm px-2 py-1 text-white">
                                                 Playback Speed
                                             </p>
-                                            {[0.75, 1, 1.25].map((speed) => (
+                                            {[0.75, 1, 1.25, 1.5, 2].map((speed) => (
                                                 <DropdownMenuItem
                                                     key={speed}
                                                     onClick={() => {
-                                                        videoRef.current!.playbackRate = speed;
+                                                        if (videoRef.current) videoRef.current.playbackRate = speed;
                                                         setPlaybackSpeed(speed);
                                                     }}
                                                     className="text-white hover:bg-white/20"
@@ -613,6 +629,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                     </DropdownMenuContent>
                                 </DropdownMenu>
 
+                                {/* Theater Mode */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -620,19 +637,20 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                             size="icon"
                                             className="h-8 w-8 text-white hover:bg-white/20"
                                             onClick={toggleTheaterMode}
+                                            aria-label={theaterMode ? "Exit theater mode" : "Theater mode"}
                                         >
-                                            {theaterMode ? (
-                                                <Minimize className="h-4 w-4" />
-                                            ) : (
-                                                <Maximize className="h-4 w-4" />
-                                            )}
+                                            {theaterMode
+                                                ? <Minimize className="h-4 w-4" />
+                                                : <Maximize className="h-4 w-4" />
+                                            }
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
+                                    <TooltipContent>
                                         {theaterMode ? "Exit theater mode (t)" : "Theater mode (t)"}
                                     </TooltipContent>
                                 </Tooltip>
 
+                                {/* Picture In Picture */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -640,15 +658,17 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                             size="icon"
                                             className="h-8 w-8 text-white hover:bg-white/20"
                                             onClick={togglePictureInPicture}
+                                            aria-label="Picture in Picture"
                                         >
                                             <PictureInPicture className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
+                                    <TooltipContent>
                                         Picture-in-picture
                                     </TooltipContent>
                                 </Tooltip>
 
+                                {/* Fullscreen */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -656,15 +676,15 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                             size="icon"
                                             className="h-8 w-8 text-white hover:bg-white/20"
                                             onClick={toggleFullscreen}
+                                            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
                                         >
-                                            {isFullscreen ? (
-                                                <Minimize className="h-4 w-4" />
-                                            ) : (
-                                                <Maximize className="h-4 w-4" />
-                                            )}
+                                            {isFullscreen
+                                                ? <Minimize className="h-4 w-4" />
+                                                : <Maximize className="h-4 w-4" />
+                                            }
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
+                                    <TooltipContent>
                                         {isFullscreen ? "Exit full screen (f)" : "Full screen (f)"}
                                     </TooltipContent>
                                 </Tooltip>

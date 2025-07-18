@@ -1,3 +1,4 @@
+//src/app/webinars/[videoId]/[slug]/page.tsx
 "use client"
 
 import Home from "@/app/page"

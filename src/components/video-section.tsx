@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ReactPlayer from "react-player";
+import VideoPlayer from "./video-player";
 
 interface Video {
   _id: string;

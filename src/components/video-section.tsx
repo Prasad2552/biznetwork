@@ -7,7 +7,7 @@ import { Play, ThumbsUp, ThumbsDown, Share, MoreHorizontal } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { VideoPlayer } from '@/components/video-player';
+import ReactPlayer from "react-player";
 
 interface Video {
   _id: string;
@@ -48,6 +48,7 @@ export function VideoSection({ token, isLoggedIn }: VideoSectionProps) {
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
+  const playerRef = useRef<ReactPlayer>(null);
 
   useEffect(() => {
     fetchVideos()

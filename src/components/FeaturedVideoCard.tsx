@@ -1,7 +1,7 @@
 // src\components\FeaturedVideoCard.tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { VideoPlayer } from "./video-player";
+import VideoPlayer from "./video-player";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";

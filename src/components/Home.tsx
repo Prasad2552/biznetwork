@@ -359,14 +359,16 @@ function Home({ params }: VideoPageProps) {
   }, [isUserLoggedIn, isAdmin]);
 
   // --- Like/Dislike helpers ---
-  const isVideoLiked = useCallback((video?: Video | null): boolean =>
-    !!session?.user?.id && !!video && video.likedBy?.includes(session.user.id),
-    [session]
-  );
-  const isVideoDisliked = useCallback((video?: Video | null): boolean =>
-    !!session?.user?.id && !!video && video.dislikedBy?.includes(session.user.id),
-    [session]
-  );
+  const isVideoLiked = (video?: Video | null): boolean => {
+  if (!session?.user?.id || !video) return false;
+  return Array.isArray(video.likedBy) && video.likedBy.includes(session.user.id);
+};
+
+const isVideoDisliked = (video?: Video | null): boolean => {
+  if (!session?.user?.id || !video) return false;
+  return Array.isArray(video.dislikedBy) && video.dislikedBy.includes(session.user.id);
+};
+
 
   // --- Likes & Dislike server ---
   const likeDislikeHandler = useCallback(async (videoId: string, type: "like" | "dislike") => {
